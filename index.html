@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="format-detection" content="telephone=no"/>
+<title>小鹤双拼跟打器</title>
+<!-- 直接通过 CDN 引入 pinyin-pro -->
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.19.6/dist/index.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f4f5;
+  --card:#fff;
+  --text:#1a1a2e;
+  --text2:#6b7280;
+  --text3:#9ca3af;
+  --primary:#6366f1;
+  --primary-hover:#4f46e5;
+  --correct:#16a34a;
+  --error:#dc2626;
+  --gray:#d1d5db;
+  --radius:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
+  display:flex;justify-content:center;
+}
+#app{
+  width:100%;max-width:640px;height:100dvh;
+  display:flex;flex-direction:column;
+  background:var(--bg);position:relative;
+}
+/* header */
+#header{
+  background:var(--card);padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;border-bottom:1px solid #f0f0f0;
+}
+#header h1{font-size:18px;font-weight:700}
+#header .sub{font-size:12px;color:var(--text2);font-weight:400}
+/* source text */
+#source-wrap{padding:10px 14px 4px;flex-shrink:0}
+#source-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin-bottom:6px}
+#source-label .count{margin-left:auto;color:var(--text3)}
+#source-box{
+  background:var(--card);border-radius:var(--radius);padding:14px 16px;
+  height:160px;overflow-y:auto;
+  font-size:17px;line-height:1.8;letter-spacing:.3px;
+  overflow-wrap:break-word;word-break:break-word;
+  border:1px solid #f0f0f0;box-shadow:var(--shadow);
+}
+#source-box::-webkit-scrollbar{width:3px}
+#source-box::-webkit-scrollbar-thumb{background:var(--gray);border-radius:2px}
+.char-u{color:var(--text3)}
+.char-c{color:var(--text)}
+.char-e{color:var(--error);font-weight:600}
+.char-cur{background:#fef3c7;border-bottom:2px solid #f59e0b;border-radius:2px}
+@keyframes blink{0%,100%{background:#eef2ff}50%{background:transparent}}
+/* stats */
+#stats-wrap{padding:4px 14px;flex-shrink:0}
+#stats-bar{
+  display:flex;align-items:center;gap:0;
+  background:var(--card);border-radius:10px;padding:8px 12px;
+  box-shadow:var(--shadow);
+}
+.s-item{flex:1;display:flex;align-items:baseline;justify-content:center;gap:3px}
+.s-label{font-size:11px;color:var(--text3);flex-shrink:0}
+.s-val{font-size:15px;font-weight:600;color:var(--text)}
+.s-unit{font-size:10px;color:var(--text3)}
+.s-div{width:1px;height:20px;background:#eee;flex-shrink:0}
+#prog-wrap{margin-top:5px;height:5px;background:#eee;border-radius:3px;overflow:hidden}
+#prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--primary),#818cf8);border-radius:3px;transition:width .3s ease}
+/* hint */
+#hint-wrap{padding:4px 14px 2px;min-height:22px;flex-shrink:0}
+#hint-error{font-size:12px;color:var(--error);display:block;line-height:1.4}
+#hint-next{font-size:12px;color:var(--correct);display:block;line-height:1.4}
+/* input */
+#input-wrap{padding:2px 14px 6px;flex-shrink:0;display:flex;flex-direction:column;min-height:72px}
+#input-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin-bottom:4px}
+#input-status{margin-left:auto;font-size:11px}
+.s-idle{color:var(--text3)}
+.s-active{color:var(--correct)}
+.s-paused{color:#f59e0b}
+.s-done{color:var(--correct)}
+#input-area{
+    width:100%;padding:10px 14px;
+    font-size:16px;line-height:1.7;letter-spacing:.3px;
+    border:2px solid #e5e7eb;border-radius:var(--radius);
+    background:var(--card);color:var(--text);
+    resize:none;outline:none;font-family:inherit;
+    transition:border-color .2s;min-height:72px;max-height:120px;
+    box-shadow:var(--shadow);
+  }
+#input-area:focus{border-color:var(--primary)}
+#input-area::placeholder{color:#d1d5db}
+#input-area:disabled{background:#f9fafb;cursor:not-allowed}
+/* bottom nav */
+#bottom-nav{margin-top:auto;display:flex;align-items:stretch;
+  display:flex;align-items:stretch;
+  padding:6px 12px 12px;gap:6px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  flex-shrink:0;border-top:1px solid #f0f0f0;
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;border:none;background:transparent;cursor:pointer;
+  border-radius:12px;transition:background .12s;padding:6px 0;min-height:44px;
+}
+.nav-btn:active{transform:scale(.96)}
+.nav-btn:hover{background:rgba(99,102,241,.06)}
+.nav-icon{font-size:20px;line-height:1}
+.nav-text{font-size:10px;color:var(--text2);font-weight:500}
+.nav-btn.primary{background:var(--primary);color:#fff}
+.nav-btn.primary:hover{background:var(--primary-hover)}
+.nav-btn.primary .nav-text{color:rgba(255,255,255,.85)}
+.nav-btn.primary:active{background:var(--primary-hover)}
+/* overlays */
+.overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.45);z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;animation:fadeIn .15s ease;
+}
+.overlay.hidden{display:none}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.dialog{
+  background:var(--card);border-radius:18px;
+  display:flex;flex-direction:column;
+  max-height:85vh;width:100%;max-width:440px;
+  box-shadow:0 20px 60px rgba(0,0,0,.15);
+  animation:slideUp .2s ease;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.dlg-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 4px;flex-shrink:0;
+}
+.dlg-head h2{font-size:17px;font-weight:700}
+.dlg-close{
+  width:30px;height:30px;border:none;border-radius:50%;
+  background:#f3f4f6;font-size:16px;color:var(--text2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.dlg-close:active{background:#e5e7eb}
+.dlg-body{flex:1;overflow-y:auto;padding:4px 18px 8px;-webkit-overflow-scrolling:touch}
+.dlg-body::-webkit-scrollbar{width:3px}
+.dlg-body::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
+.dlg-foot{padding:8px 18px 16px;display:flex;gap:8px;flex-shrink:0;justify-content:center}
+/* article list */
+.a-item{
+  display:flex;align-items:center;padding:10px 0;
+  border-bottom:1px solid #f3f4f6;gap:8px;
+}
+.a-item:last-child{border-bottom:none}
+.a-info{flex:1;min-width:0}
+.a-title{font-size:15px;font-weight:500;color:var(--text)}
+.a-meta{font-size:11px;color:var(--text3);margin-top:1px}
+.a-badge{font-size:9px;color:var(--text3);background:#f3f4f6;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle}
+/* buttons */
+.btn{
+  height:38px;padding:0 18px;border:none;border-radius:19px;
+  font-size:13px;font-weight:500;cursor:pointer;
+  transition:background .12s,opacity .12s;
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  white-space:nowrap;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-green{background:var(--correct);color:#fff}
+.btn-green:hover{opacity:.9}
+.btn-danger{background:var(--error);color:#fff;height:30px;padding:0 12px;border-radius:15px;font-size:11px}
+.btn-danger:hover{opacity:.9}
+.btn-ghost{background:#f3f4f6;color:var(--text2)}
+.btn-ghost:hover{background:#e5e7eb}
+.btn-block{width:100%}
+.btn-sm{height:30px;padding:0 12px;font-size:11px;border-radius:15px}
+/* forms */
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.form-group label{font-size:12px;color:var(--text2);font-weight:500}
+.form-group input,.form-group textarea{
+  width:100%;padding:10px 12px;border:1px solid #e5e7eb;
+  border-radius:8px;font-size:14px;font-family:inherit;
+  color:var(--text);background:#fafafa;outline:none;transition:border-color .15s;
+}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--primary);background:#fff}
+.form-group textarea{resize:vertical;min-height:100px}
+.char-hint{font-size:11px;color:var(--text3);text-align:right}
+.url-group{margin-top:6px;padding-top:10px;border-top:1px solid #f3f4f6}
+.url-group .divider{text-align:center;font-size:11px;color:var(--text3);margin-bottom:8px}
+.fetch-status{font-size:11px;color:var(--text3);display:block;margin-top:4px}
+/* result */
+.result-card{padding:6px 0}
+.r-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:#f9fafb;border-radius:8px;margin-bottom:6px;
+}
+.r-label{font-size:13px;color:var(--text2)}
+.r-val{font-size:15px;font-weight:600;color:var(--text)}
+.r-comment{text-align:center;font-size:13px;color:var(--text2);padding:8px 0 2px;font-weight:500}
+/* scrollbar global */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
+/* keyboard spacer for iOS */
+@supports(padding-bottom:env(safe-area-inset-bottom)){
+  #bottom-nav{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+}
+.overlay.instant .dialog{animation:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <h1>📖 小鹤双拼跟打器</h1>
+    <span class="sub" id="chapter-name">最后一天</span>
+  </header>
+  <section id="source-wrap">
+    <div id="source-label">
+      <span>📝 原文</span>
+      <span class="count" id="char-count">0 字</span>
+    </div>
+    <div id="source-box"><span id="source-chars"></span></div>
+  </section>
+  <section id="stats-wrap">
+    <div id="stats-bar">
+      <div class="s-item"><span class="s-label">时间</span><span class="s-val" id="time-disp">00:00</span></div>
+      <div class="s-div"></div>
+      <div class="s-item"><span class="s-val" id="speed-disp">0</span><span class="s-unit">字/分</span></div>
+      <div class="s-div"></div>
+      <div class="s-item"><span class="s-val" id="acc-disp">100</span><span class="s-unit">%</span></div>
+    </div>
+    <div id="prog-wrap"><div id="prog-fill"></div></div>
+  </section>
+  <div id="hint-wrap">
+    <span id="hint-error"></span>
+    <span id="hint-next"></span>
+  </div>
+  <section id="input-wrap">
+    <div id="input-label">
+      <span>⌨️ 输入</span>
+      <span id="input-status" class="s-idle">● 就绪</span>
+    </div>
+    <textarea id="input-area" placeholder="轻点此处开始打字…" rows="2"></textarea>
+  </section>
+  <nav id="bottom-nav">
+    <button class="nav-btn" id="btn-menu"><span class="nav-icon">📚</span><span class="nav-text">目录</span></button>
+    <button class="nav-btn" id="btn-restart"><span class="nav-icon">🔄</span><span class="nav-text">重来</span></button>
+    <button class="nav-btn primary" id="btn-done"><span class="nav-icon">✓</span><span class="nav-text">完成</span></button>
+  </nav>
+  <!-- 目录弹窗 -->
+  <div class="overlay hidden" id="menu-overlay">
+    <div class="dialog">
+      <div class="dlg-head">
+        <h2>📚 选择小说</h2>
+        <button class="dlg-close" id="close-menu">✕</button>
+      </div>
+      <div class="dlg-body" id="menu-list"></div>
+      <div class="dlg-foot"><button class="btn btn-primary btn-block" id="btn-add-chapter">＋ 新增章节</button></div>
+    </div>
+  </div>
+  <!-- 新增弹窗 -->
+  <div class="overlay hidden" id="add-overlay">
+    <div class="dialog">
+      <div class="dlg-head">
+        <h2>📝 新增章节</h2>
+        <button class="dlg-close" id="close-add">✕</button>
+      </div>
+      <div class="dlg-body">
+        <div class="form-group">
+          <label>标题 *</label>
+          <input type="text" id="inp-title" placeholder="章节名 / 文章标题" />
+        </div>
+        <div class="form-group">
+          <label>作者（选填）</label>
+          <input type="text" id="inp-author" placeholder="作者名" />
+        </div>
+        <div class="form-group">
+          <label>内容 *</label>
+          <span class="char-hint" id="content-hint">0 / 1000 字</span>
+          <textarea id="inp-content" placeholder="粘贴或输入文章内容…" rows="8"></textarea>
+        </div>
+        <div class="form-row" style="display:flex;gap:8px">
+          <button class="btn btn-ghost" id="btn-cancel-add" style="flex:1">取消</button>
+          <button class="btn btn-green" id="btn-save-add" style="flex:1">保存</button>
+        </div>
+        <div class="url-group">
+          <div class="divider">━━ 或从网址导入 ━━</div>
+          <div style="display:flex;gap:6px">
+            <input type="url" id="inp-url" placeholder="输入文章网址…" style="flex:1" />
+            <button class="btn btn-ghost btn-sm" id="btn-fetch">获取</button>
+          </div>
+          <span class="fetch-status" id="fetch-status"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 结果弹窗 -->
+  <div class="overlay hidden" id="result-overlay">
+    <div class="dialog">
+      <div class="dlg-head"><h2>🏆 打字成绩</h2></div>
+      <div class="dlg-body result-card">
+        <div class="r-row"><span class="r-label">⏱ 用时</span><span class="r-val" id="r-time">00:00</span></div>
+        <div class="r-row"><span class="r-label">✅ 正确</span><span class="r-val" id="r-correct">0 / 0</span></div>
+        <div class="r-row"><span class="r-label">⚡ 速度</span><span class="r-val" id="r-speed">0 字/分</span></div>
+        <div class="r-row"><span class="r-label">🎯 正确率</span><span class="r-val" id="r-acc">100%</span></div>
+        <div class="r-comment" id="r-comment"></div>
+      </div>
+      <div class="dlg-foot">
+        <button class="btn btn-green" id="r-restart" style="flex:1">重新开始</button>
+        <button class="btn btn-primary" id="r-close" style="flex:1">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+/* ========== state ========== */
+let isActive=false,startTime=0,elapsed=0,timerId=null
+let userInput='',sourceText='',currentTitle='';var isComposing=false
+const SKA='typing_novel_user',SKC='typing_novel_cur'
+const defaults=[
+  {title:'最后一天',author:'佚名',content:'校园里静悄悄的，仿佛只剩下了我。时间仿佛就静止在了这一刻，静止在了我在小学的最后一天。当我挥挥手，告别这里，告别我六年的回忆。不知怎的，心里一阵悸动。看那个三楼的走廊，六年级的时候，我的喜怒哀乐都埋藏在那里，开心时，我会和朋友们一起去那里玩耍；被老师骂了，同学欺负时，我会偷偷躲在哪里流泪；生气时，我会一个人去那里静一静。这似乎已经变成了一个习惯，我看着那里的迎春花从开放，到枯萎，再到开放。每一次，我似乎都能和它交流。再看看我这些可爱的同学吧，从一年级到三年级，我几乎没有朋友，是他们让我慢慢变得开朗，我明显的感觉到自己和以前的自己不一样了，我变了……以前，总以为不爱笑的老师，今天却微笑着送我们离去。他们似乎是想要让我们留下一个好印象。六年来，我拼死想要离开的校园，现在真的离开了，反倒舍不得了。踏入初中，虽然感觉没那么糟，但总是怀念小学。虽说同学老师对我都挺好的，我也觉得挺幸福的，但总感觉少了些什么，心里空空的。我的回忆，仿佛还是静止的……',isDefault:true},
+  {title:'匆匆',author:'朱自清',content:'燕子去了，有再来的时候；杨柳枯了，有再青的时候；桃花谢了，有再开的时候。但是，聪明的，你告诉我，我们的日子为什么一去不复返呢？',isDefault:true},
+  {title:'少年中国说',author:'梁启超',content:'故今日之责任，不在他人，而全在我少年。少年智则国智，少年富则国富；少年强则国强，少年独立则国独立；少年自由则国自由，少年进步则国进步。',isDefault:true},
+  {title:'朋友',author:'陶渊明',content:'无疑，朋友是一个让人心生温暖的字眼，人生在世，谁无朋乎谁又能离得开朋友的理解和帮忙人世间因了朋友的这种感情也越加精彩。当你事业成功的时候，你会第一个想到找朋友喝两杯庆贺一下，当你寂寞的时候，你会三更半夜把他吵醒陪你聊天，让他做你最真实的听众，当你失意潦倒的时候，你更需要朋友的抚慰。有人说，女人是年青的好，朋友是老的好。所谓衣不如新人不如故，即为此理。其实这也只是片面之辞。有的朋友是白首如新，有的朋友是倾盖如故。诚然，相识相交的时间越长，感情也越厚深，但未必知心。所以先贤说，朱门早达笑弹冠，白首相知犹按剑。这是最尴尬的一种朋友。如果你有这种朋友，你会走霉运，如果你是这种朋友，你应当感到脸红。“有朋自远方来，尚能饭否”朋友相遇时第一个问题就是：“你吃饭了没有”这是最关切的问候，但并不表示朋友的交情只能在酒桌上体现，相反，交友贵乎知心。请朋友喝酒只是友情的一种表达方式，并不是说，有酒有肉就是好朋友。通常，这只是酒肉朋友，当你真正有困难的时候，你所拨打的用户已死掉!朋友应当是平等的，没有贵贱之分尊卑之别。以前的皇帝就没有朋友，在他的心中，世上所有的臣民都是他的奴才。所以，皇帝自以为是世上最尊贵的人，其实是世上最可怜的人。“有朋自远方来，不亦悦乎”倘这个朋友是久别旧交，蓦然而至悄然掩近，其心境之激动欣喜莫名而不可言喻。当敲门声响起，你打开房门，呈此刻眼前的是一张久违而熟悉的面孔，你起先是错鄂，继而是惊奇，然后是大叫一声，张开热情的双臂……。有人认为你最知心的人应当是你的配偶，其实未必，同床异梦貌合神离的夫妻比比皆是。朋友，是一支火把，燃烧的是自我，照亮的却是你的前程。或者是一块垫脚石。任你踩蹬而上。对于这种朋友，我把他冠以另一个亲切的名称"兄弟"惜乎次种朋友并不多见，倒是口里喊哥哥腰里掏家伙的并不小见。悲哉!所以，当你准备交朋友时，请擦亮你的眼睛，当你做了别人的朋友时，请一日三省吾身。切记切记!',isDefault:true},
+  {title:'陋室铭',author:'刘禹锡',content:'山不在高，有仙则名。水不在深，有龙则灵。斯是陋室，惟吾德馨。苔痕上阶绿，草色入帘青。谈笑有鸿儒，往来无白丁。可以调素琴，阅金经。无丝竹之乱耳，无案牍之劳形。南阳诸葛庐，西蜀子云亭。孔子云：何陋之有？',isDefault:true}
+]
+
+// 获取 pinyin-pro 的拼音函数
+const { pinyin } = window.pinyinPro || {}
+
+function loadAll(){try{const d=localStorage.getItem(SKA);const u=d?JSON.parse(d):[];return[...defaults,...u]}catch{return[...defaults]}}
+function saveUser(a){localStorage.setItem(SKA,JSON.stringify(a.filter(x=>!x.isDefault)))}
+function findTitle(t){return loadAll().find(x=>x.title===t)||null}
+function saveCur(t){currentTitle=t;localStorage.setItem(SKC,t)}
+function getCur(){return localStorage.getItem(SKC)||''}
+function cleanText(s){return s.split('\n').filter(l=>l.trim()).join('\n')}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+/* ========== 拼音转换（使用本地 pinyin-pro 库） ========== */
+function getPy(char) {
+  if (!char) return ''
+  
+  const code = char.charCodeAt(0)
+  // 英文字母
+  if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+    return char.toLowerCase()
+  }
+  // 数字
+  if (code >= 48 && code <= 57) {
+    return char
+  }
+  // 非中文（标点符号等）
+  if (code < 0x4E00 || code > 0x9FFF) {
+    return ''
+  }
+  
+  // 使用 pinyin-pro 转换
+  try {
+    if (pinyin && typeof pinyin === 'function') {
+      // 第二个参数 { toneType: 'none' } 去掉声调
+      const result = pinyin(char, { toneType: 'none' })
+      return result || ''
+    }
+  } catch (e) {
+    console.warn('拼音转换失败:', e)
+  }
+  return ''
+}
+
+/* ========== 双拼转换 ========== */
+function pinyinToShuangpin(py){
+  if(!py || py==='?') return ''
+  py = py.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  
+  const sm = {zh:'v', ch:'i', sh:'u'}
+  const ym = {
+    iu:'q', ei:'w', e:'e', uan:'r', ue:'t', ve:'t', un:'y',
+    u:'u', i:'i', o:'o', uo:'o', ie:'p', a:'a', ong:'s',
+    iong:'s', ai:'d', en:'f', eng:'g', ang:'h', an:'j',
+    ing:'k', uai:'k', iang:'l', uang:'l', 'er':';', ou:'z',
+    ia:'x', ua:'x', ao:'c', ui:'v', v:'v', in:'b',
+    iao:'n', ian:'m'
+  }
+  const il = ['zh','ch','sh','b','p','m','f','d','t','n','l','g','k','h','j','q','x','r','z','c','s']
+  
+  let ch='', yu=py
+  for(const i of il){
+    if(py.startsWith(i)){
+      ch=i
+      yu=py.slice(i.length)
+      break
+    }
+  }
+  
+  if(!ch){
+    if(py.length === 1) return py + py
+    const f = py[0], r = py.slice(1)
+    if(ym[r]) return f + ym[r]
+    if(ym[py]) return f + ym[py]
+    return f + (ym[r] || r[0] || f)
+  }
+  
+  const xi = sm[ch] || ch
+  const xf = ym[yu] || yu[0] || 'a'
+  return xi + xf
+}
+
+function dispCh(c){
+  if(c==="\n") return "换行"
+  if(c===" ") return "空格"
+  if(c==="\t") return "制表符"
+  return c
+}
+
+function hintPy(c){
+  if(c==='\n') return '按回车'
+  if(c===' ') return '按空格'
+  const p = getPy(c)
+  if(!p) return ''
+  const sp = pinyinToShuangpin(p)
+  return '拼音「'+p+'」'+(sp ? '，双拼「'+sp+'」' : '')
+}
+
+/* ========== 渲染 ========== */
+function render(){
+  const el=document.getElementById('source-chars')
+  const chs=sourceText.split(''),pos=userInput.length
+  let h=''
+  for(let i=0;i<chs.length;i++){
+    let c='char-u'
+    if(i<pos)c=(userInput[i]===sourceText[i])?'char-c':'char-e'
+    if(i===pos && i<sourceText.length)c+=' char-cur'
+    h+='<span class="'+c+'">'+esc(chs[i])+'</span>'
+  }
+  el.innerHTML=h
+  var curEl=el.querySelector('.char-cur')
+  if(curEl){
+    var bx=document.getElementById('source-box')
+    var ct=curEl.offsetTop
+    if(ct>bx.scrollTop+bx.clientHeight-40 || ct<bx.scrollTop){
+      curEl.scrollIntoView({block:'center',behavior:'smooth'})
+    }
+  }
+  document.getElementById('char-count').textContent=chs.length+' 字'
+  document.getElementById('chapter-name').textContent=currentTitle||'最后一天'
+}
+
+/* ========== stats ========== */
+function calc(){
+  const total=sourceText.length,cnt=userInput.length
+  let cor=0
+  for(let i=0;i<Math.min(cnt,total);i++) if(userInput[i]===sourceText[i]) cor++
+  const pct=total>0?Math.floor(cnt/total*100):0
+  const acc=cnt>0?Math.floor(cor/cnt*100):100
+  const spd=(elapsed>0 && cor>0)?Math.floor(cor/elapsed*60):0
+  document.getElementById('speed-disp').textContent=spd
+  document.getElementById('acc-disp').textContent=acc
+  document.getElementById('prog-fill').style.width=Math.min(pct,100)+'%'
+  return{cor,pct,acc,spd,total}
+}
+
+/* ========== timer ========== */
+function tStart(){
+  if(timerId!==null)return
+  timerId=setInterval(function(){
+    if(startTime>0){
+      elapsed=Math.floor((Date.now()-startTime)/1000)
+      const m=String(Math.floor(elapsed/60)).padStart(2,'0'),s=String(elapsed%60).padStart(2,'0')
+      document.getElementById('time-disp').textContent=m+':'+s
+      calc()
+    }
+  },1000)
+}
+function tStop(){if(timerId!==null){clearInterval(timerId);timerId=null}}
+function tReset(){tStop();startTime=0;elapsed=0;document.getElementById('time-disp').textContent='00:00'}
+
+/* ========== hints ========== */
+function updateHints(){
+  const eEl=document.getElementById('hint-error'),nEl=document.getElementById('hint-next')
+  const pos=userInput.length
+  if(pos===0){
+    const c=sourceText[0]
+    if(c){
+      const p=hintPy(c)
+      nEl.textContent='下一个：「'+dispCh(c)+'」'+(p ? '，'+p : '')
+      eEl.textContent=''
+    }
+    return
+  }
+  let ml=0
+  for(let i=0;i<pos;i++){ if(userInput[i]===sourceText[i]) ml=i+1; else break }
+  if(ml<pos){
+    const ec=sourceText[pos-1]
+    if(userInput[pos-1]===ec){
+      eEl.textContent=''
+      const nc=sourceText[pos]
+      nEl.textContent=nc ? '下一个：「'+dispCh(nc)+'」'+(hintPy(nc) ? '，'+hintPy(nc) : '') : ''
+    }else{
+      const ec2=sourceText[pos-1]
+      eEl.textContent='错误，应是「'+dispCh(ec2)+'」'+(hintPy(ec2) ? '，'+hintPy(ec2) : '')
+      nEl.textContent=''
+    }
+  }else{
+    eEl.textContent=''
+    const nc=sourceText[pos]
+    nEl.textContent=nc ? '下一个：「'+dispCh(nc)+'」'+(hintPy(nc) ? '，'+hintPy(nc) : '') : ''
+  }
+}
+
+/* ========== status ========== */
+function setStatus(t,c){const el=document.getElementById('input-status');el.textContent='● '+t;el.className=c}
+
+/* ========== input ========== */
+function onInput(v){
+  if(!isActive && v.length>0 && sourceText.length>0){
+    isActive=true
+    startTime=Date.now()
+    tStart()
+    setStatus('输入中','s-active')
+  }
+  if(v.length>sourceText.length) v=v.substring(0,sourceText.length)
+  userInput=v
+  render()
+  calc()
+  updateHints()
+  if(userInput.length>=sourceText.length && sourceText.length>0 && isActive) finish()
+}
+
+function finish(){
+  if(!isActive)return
+  isActive=false
+  tStop()
+  const s=calc()
+  setStatus('完成','s-done')
+  const m=String(Math.floor(elapsed/60)).padStart(2,'0'),sec=String(elapsed%60).padStart(2,'0')
+  document.getElementById('r-time').textContent=m+':'+sec
+  document.getElementById('r-correct').textContent=s.cor+' / '+s.total
+  document.getElementById('r-speed').textContent=s.spd+' 字/分'
+  document.getElementById('r-acc').textContent=s.acc+'%'
+  let c=''
+  if(s.acc>=98 && s.spd>=60)c='🏴 完美！你是打字高手！'
+  else if(s.acc>=95 && s.spd>=40)c='🏆 非常棒！继续加油！'
+  else if(s.acc>=90)c='📱 不错哦，再练练会更快！'
+  else c='💭 多练习，下次会更好！'
+  document.getElementById('r-comment').textContent=c
+  document.getElementById('result-overlay').classList.remove('hidden')
+}
+
+function resetP(){
+  userInput=''
+  isActive=false
+  tReset()
+  document.getElementById('input-area').value=''
+  document.getElementById('input-area').disabled=false
+  render()
+  calc()
+  updateHints()
+  setStatus('就绪','s-idle')
+  document.getElementById('input-area').focus()
+}
+
+/* ========== load article ========== */
+function loadArt(a){
+  sourceText=cleanText(a.content)
+  currentTitle=a.title
+  saveCur(a.title)
+  resetP()
+}
+
+function loadDef(){const d=defaults.find(x=>x.title==='最后一天');if(d)loadArt(d)}
+
+function init(){
+  const st=getCur()
+  if(st){
+    const a=findTitle(st)
+    if(a){
+      loadArt(a)
+      return
+    }
+  }
+  loadDef()
+}
+
+/* ========== menu ========== */
+function openMenu(){renderMenu();document.getElementById('menu-overlay').classList.remove('hidden')}
+function closeMenu(){document.getElementById('menu-overlay').classList.add('hidden')}
+function renderMenu(){
+  const el=document.getElementById('menu-list'),all=loadAll()
+  el.innerHTML=''
+  all.forEach(function(a){
+    const d=document.createElement('div');d.className='a-item'
+    const info=document.createElement('div');info.className='a-info'
+    const t=document.createElement('div');t.className='a-title';t.textContent=a.title
+    if(a.isDefault){const b=document.createElement('span');b.className='a-badge';b.textContent='默认';t.appendChild(b)}
+    const m=document.createElement('div');m.className='a-meta';m.textContent=a.author+' · '+a.content.length+' 字'
+    info.appendChild(t);info.appendChild(m);d.appendChild(info)
+    const ac=document.createElement('div');ac.style.display='flex';ac.style.gap='4px';ac.style.alignItems='center'
+    if(!a.isDefault){
+      const db=document.createElement('button');db.className='btn btn-danger';db.textContent='删'
+      db.addEventListener('click',function(e){e.stopPropagation();delArt(a.title)})
+      ac.appendChild(db)
+    }
+    const sb=document.createElement('button');sb.className='btn btn-sm btn-primary';sb.textContent='选择'
+    sb.addEventListener('click',function(){loadArt(a);closeMenu()})
+    ac.appendChild(sb);d.appendChild(ac);el.appendChild(d)
+  })
+}
+function delArt(t){
+  const all=loadAll(),ua=all.filter(x=>!x.isDefault),nu=ua.filter(x=>x.title!==t)
+  if(nu.length===ua.length)return
+  saveUser(nu)
+  if(currentTitle===t){const d=defaults.find(x=>x.title==='最后一天');if(d)loadArt(d)}
+  renderMenu()
+}
+
+/* ========== add ========== */
+function openAdd(){
+  document.getElementById('add-overlay').classList.remove('hidden')
+  document.getElementById('inp-title').value=''
+  document.getElementById('inp-author').value=''
+  document.getElementById('inp-content').value=''
+  document.getElementById('content-hint').textContent='0 / 1000 字'
+  document.getElementById('fetch-status').textContent=''
+}
+function closeAdd(){document.getElementById('add-overlay').classList.add('hidden')}
+function saveAdd(){
+  const t=document.getElementById('inp-title').value.trim(),a=document.getElementById('inp-author').value.trim()||'佚名',c=document.getElementById('inp-content').value.trim()
+  if(!t){alert('请输入标题');return}if(!c){alert('请输入内容');return}if(c.length>1000){alert('内容不能超过1000字');return}
+  const all=loadAll();if(all.find(x=>x.title===t)){alert('标题已存在');return}
+  const ua=all.filter(x=>!x.isDefault);ua.push({title:t,author:a,content:c,isDefault:false})
+  saveUser(ua);closeAdd()
+}
+
+/* ========== fetch ========== */
+async function fetchUrl(){
+  const url=document.getElementById('inp-url').value.trim()
+  if(!url){alert('请输入网址');return}
+  const st=document.getElementById('fetch-status');st.textContent='正在获取…';st.style.color='#6b7280'
+  try{
+    const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}})
+    if(!r.ok)throw new Error('HTTP '+r.status)
+    const html=await r.text(),doc=new DOMParser().parseFromString(html,'text/html')
+    let title='';const te=doc.querySelector('title');if(te){title=te.textContent.trim();title=title.replace(/[-_|]\s*(作文网|范文网|百度文库|知乎).*$/i,'')}
+    if(!title||title.length<=5){const h1=doc.querySelector('h1');if(h1)title=h1.textContent.trim()}
+    let content=''
+    for(const sel of['article','[class*="article-content"]','[class*="content"]','[class*="detail"]','[class*="post-content"]','#content']){
+      try{const el=doc.querySelector(sel);if(el&&el.textContent.trim().length>200){content=el.textContent.trim();break}}catch{}
+    }
+    if(!content||content.length<50){const b=doc.querySelector('body');content=b?b.textContent.trim().substring(0,3000):''}
+    content=content.replace(/\s+/g,' ').trim();if(content.length>1000)content=content.substring(0,1000)
+    document.getElementById('inp-title').value=title||'未获取到标题'
+    document.getElementById('inp-author').value=url.includes('zuowen')?'作文网':url.includes('fanwen')?'范文网':'网页'
+    document.getElementById('inp-content').value=content
+    document.getElementById('content-hint').textContent=content.length+' / 1000 字'
+    st.textContent='✓ 获取成功！';st.style.color='#16a34a'
+  }catch(e){st.textContent='✗ 获取失败：'+e.message;st.style.color='#dc2626'}
+}
+
+/* ========== DOM ready ========== */
+document.addEventListener('DOMContentLoaded',function(){
+  // 检查 pinyin-pro 是否加载成功
+  if (!window.pinyinPro) {
+    console.warn('pinyin-pro 未加载，拼音提示功能将不可用')
+  } else {
+    console.log('pinyin-pro 加载成功，拼音功能已就绪')
+  }
+  
+  init()
+  
+  document.getElementById('input-area').addEventListener('input',function(e){if(!e.isComposing)onInput(this.value)})
+  document.getElementById('input-area').addEventListener('compositionstart',function(){isComposing=true})
+  document.getElementById('input-area').addEventListener('compositionend',function(){isComposing=false;onInput(document.getElementById('input-area').value)})
+  document.getElementById('btn-menu').addEventListener('click',openMenu)
+  document.getElementById('btn-restart').addEventListener('click',resetP)
+  document.getElementById('btn-done').addEventListener('click',function(){if(userInput.length>0)finish()})
+  document.getElementById('close-menu').addEventListener('click',closeMenu)
+  document.getElementById('menu-overlay').addEventListener('click',function(e){if(e.target===this)closeMenu()})
+  document.getElementById('btn-add-chapter').addEventListener('click',function(){closeMenu();openAdd()})
+  document.getElementById('close-add').addEventListener('click',closeAdd)
+  document.getElementById('btn-cancel-add').addEventListener('click',closeAdd)
+  document.getElementById('add-overlay').addEventListener('click',function(e){if(e.target===this)closeAdd()})
+  document.getElementById('btn-save-add').addEventListener('click',saveAdd)
+  document.getElementById('btn-fetch').addEventListener('click',fetchUrl)
+  document.getElementById('inp-content').addEventListener('input',function(){const l=this.value.length;document.getElementById('content-hint').textContent=l+' / 1000 字'})
+  document.getElementById('r-restart').addEventListener('click',function(){document.getElementById('result-overlay').classList.add('hidden');resetP()})
+  document.getElementById('r-close').addEventListener('click',function(){document.getElementById('result-overlay').classList.add('hidden')})
+  document.getElementById('result-overlay').addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden')})
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.overlay:not(.hidden)').forEach(function(el){el.classList.add('hidden')})}})
+})
+</script>
+</body>
+</html>
