@@ -109,45 +109,17 @@
             box-shadow: 0 5px 15px rgba(56, 178, 172, 0.2);
         }
 
-        /* 底部按钮容器 - 让开始练习和返回首页并排 */
+        /* 底部按钮容器 - 只保留返回首页按钮 */
         .selector-actions {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 16px;
             margin-top: 30px;
-            //flex-wrap: wrap;
+            grid-column: 1 / -1;
         }
 
-        .start-practice-button {
-            padding: 15px 30px;
-            font-size: 18px;
-            background: #38b2ac;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            flex: 0 1 auto;
-            min-width: 140px;
-        }
-
-        .start-practice-button:hover {
-            background: #2c978f;
-            transform: translateY(-2px);
-        }
-
-        .start-practice-button:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* 与开始练习按钮样式一致的返回首页按钮 */
         .home-button-primary {
-            padding: 15px 5px;
+            padding: 15px 30px;
             font-size: 18px;
             background: #667eea;
             color: white;
@@ -160,7 +132,6 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex: 0 1 auto;
             min-width: 140px;
         }
 
@@ -501,7 +472,6 @@
             }
             
             .chapter-selector {
-                //grid-template-columns: repeat(2, 1fr);
                 gap: 10px;
             }
             
@@ -584,7 +554,6 @@
                 gap: 12px;
             }
 
-            .start-practice-button,
             .home-button-primary {
                 width: 100%;
                 min-width: unset;
@@ -702,9 +671,9 @@
                 <div class="chapter-title">第9章</div>
                 <div class="chapter-desc">ua、uai、iong</div>
             </div>
-            <!-- 按钮区域：开始练习 + 返回首页并排 -->
+            <!-- 只保留返回首页按钮，删除开始练习按钮 -->
             <div class="selector-actions">
-                <button id="startPractice" class="start-practice-button" disabled>开始练习</button><a href="index.html" class="home-button-primary">🏠 回首页</a>
+                <a href="index.html" class="home-button-primary">🏠 回首页</a>
             </div>
         </div>
 
@@ -1524,12 +1493,17 @@
              * 绑定所有DOM事件监听器
              */
             bindEvents() {
-                // 章节选择事件 - 添加触摸反馈
+                // 章节选择事件 - 点击直接进入该章节练习
                 this.elements.chapterCards.forEach(card => {
                     card.addEventListener('click', (e) => {
                         const chapter = parseInt(e.currentTarget.dataset.chapter);
                         if (chapter >= 0) { // 只处理有效的章节
-                            this.toggleChapterSelection(chapter);
+                            // 清空之前选中的章节样式
+                            this.elements.chapterCards.forEach(c => c.classList.remove('selected'));
+                            // 标记当前章节为选中（视觉反馈）
+                            e.currentTarget.classList.add('selected');
+                            // 直接进入该章节练习
+                            this.startPracticeWithChapter(chapter);
                         }
                     });
                     
@@ -1543,10 +1517,6 @@
                         });
                     }
                 });
-                
-                // 开始练习按钮事件
-                this.elements.startPractice = document.getElementById('startPractice');
-                this.elements.startPractice.addEventListener('click', () => this.startPractice());
         
                 // 控制按钮事件
                 this.elements.backToChapters.addEventListener('click', () => this.backToChapters());
@@ -1603,10 +1573,10 @@
             }
         
             /**
-             * 选择并加载指定章节的词汇
+             * 直接开始指定章节的练习（点击章节卡片触发）
              * @param {number} chapterIndex - 章节索引
              */
-            selectChapter(chapterIndex) {
+            startPracticeWithChapter(chapterIndex) {
                 // 验证章节索引
                 if (chapterIndex < 0 || chapterIndex >= 10) {
                     this.showMessage('章节索引无效', 'error');
@@ -1614,6 +1584,7 @@
                 }
                 
                 this.currentChapter = chapterIndex;
+                this.selectedChapters = [chapterIndex]; // 仅选中当前章节
                 this.currentWords = Object.keys(SHUANGPIN_DATA[chapterIndex] || {});
                 
                 if (this.currentWords.length === 0) {
@@ -1629,76 +1600,7 @@
                 this.showPracticeArea();
                 this.displayCurrentWord();
                 this.updateStats();
-                
-                // 确保输入框获得焦点
-                setTimeout(() => this.elements.realtimeInput.focus(), 100);
-            }
-            
-            /**
-             * 切换章节的选中状态
-             * @param {number} chapterIndex - 章节索引
-             */
-            toggleChapterSelection(chapterIndex) {
-                const index = this.selectedChapters.indexOf(chapterIndex);
-                const card = this.elements.chapterCards[Array.from(this.elements.chapterCards).findIndex(c => parseInt(c.dataset.chapter) === chapterIndex)];
-                
-                if (index === -1) {
-                    // 选中章节
-                    this.selectedChapters.push(chapterIndex);
-                    card.classList.add('selected');
-                } else {
-                    // 取消选中
-                    this.selectedChapters.splice(index, 1);
-                    card.classList.remove('selected');
-                }
-                
-                // 更新开始练习按钮状态
-                this.updateStartButtonState();
-                // 更新高亮（如果已启用）
-                this.updateHighlights();
-            }
-            
-            /**
-             * 更新开始练习按钮状态
-             */
-            updateStartButtonState() {
-                if (this.selectedChapters.length > 0) {
-                    this.elements.startPractice.disabled = false;
-                } else {
-                    this.elements.startPractice.disabled = true;
-                }
-            }
-            
-            /**
-             * 开始练习选中的章节
-             */
-            startPractice() {
-                if (this.selectedChapters.length === 0) {
-                    this.showMessage('请至少选择一个章节', 'error');
-                    return;
-                }
-                
-                // 合并选中章节的词汇
-                this.currentWords = [];
-                this.selectedChapters.forEach(chapter => {
-                    const words = Object.keys(SHUANGPIN_DATA[chapter] || {});
-                    this.currentWords = [...this.currentWords, ...words];
-                });
-                
-                if (this.currentWords.length === 0) {
-                    this.showMessage('选中的章节暂无词汇', 'error');
-                    return;
-                }
-                
-                // 使用Fisher-Yates算法进行更公平的随机排序
-                this.currentWords = this.fisherYatesShuffle([...this.currentWords]);
-                
-                // 重置状态并显示练习界面
-                this.resetStats();
-                this.showPracticeArea();
-                this.displayCurrentWord();
-                this.updateStats();
-                // 启动练习时也更新高亮，确保多选章节时生效
+                // 更新高亮
                 this.updateHighlights();
                 
                 // 确保输入框获得焦点
@@ -1903,16 +1805,13 @@
                 this.elements.practiceArea.style.display = 'none';
                 this.currentChapter = null;
                 this.currentWords = [];
-                this.selectedChapters = []; // 清空选中的章节
+                this.selectedChapters = [];
                 this.resetStats();
                 
                 // 重置章节卡片选中状态
                 this.elements.chapterCards.forEach(card => {
                     card.classList.remove('selected');
                 });
-                
-                // 更新开始练习按钮状态
-                this.updateStartButtonState();
                 
                 // 隐藏消息和键盘
                 this.elements.message.style.display = 'none';
@@ -1921,7 +1820,6 @@
                 }
                 // 清除高亮
                 if (this.elements && this.elements.highlightToggle) {
-                    // 保持复选框状态，但清空按键高亮
                     this.updateHighlights();
                 }
             }
@@ -2019,13 +1917,12 @@
                 // 如果复选框不存在或未勾选，则移除所有高亮
                 const toggle = this.elements?.highlightToggle;
                 const keyMap = this.elements?.keyMap || {};
-                const keyTokenMap = this.elements?.keyTokenMap || {};
                 if (!toggle || !toggle.checked) {
                     Object.values(keyMap).forEach(k => k.classList.remove('highlight'));
                     return;
                 }
 
-                // 使用固定表 CHAPTER_KEY_MAP：收集所有选中章节对应的按键字母集合
+                // 使用固定表 CHAPTER_KEY_MAP：收集当前选中章节对应的按键字母集合
                 const lettersToHighlight = new Set();
                 if (this.selectedChapters && this.selectedChapters.length > 0) {
                     this.selectedChapters.forEach(ch => {
