@@ -744,7 +744,7 @@
                 </div>
                 <div class="right-controls">
                     <button class="control-button" id="answerToggle">显示答案</button>
-                    <button class="control-button" id="keyboardToggle">按键图</button>
+                    <button class="control-button" id="keyboardToggle">显示键盘</button>
                 </div>
             </div>
 
@@ -1537,7 +1537,7 @@
              * 根据设备类型调整界面 - 移动端默认不显示键盘
              */
             adaptToDevice() {
-                // 移动设备上不自动显示键盘，由用户手动点击"按键图"按钮控制
+                // 移动设备上不自动显示键盘，由用户手动点击"显示键盘"按钮控制
                 if (this.isMobile) {
                     // 确保键盘初始为隐藏状态
                     const keyboard = this.elements.keyboardLayout;
@@ -1551,7 +1551,7 @@
                     const btn = this.elements.keyboardToggle;
                     if (btn) {
                         btn.classList.remove('active');
-                        btn.textContent = '按键图';
+                        btn.textContent = '显示键盘';
                     }
                 }
             }
@@ -1944,7 +1944,7 @@
                     this.updateHighlights();
                 } else {
                     btn.classList.remove('active');
-                    btn.textContent = '按键图';
+                    btn.textContent = '显示键盘';
                     keyboard.style.maxHeight = '0';
                     keyboard.style.opacity = '0';
                     keyboard.style.padding = '0';
