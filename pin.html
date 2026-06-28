@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>小鹤双拼在线练习 - 免费打字训练平台</title>
     <meta name="description" content="专业的小鹤双拼打字练习工具。提供键位提示与实时反馈，无需下载，打开即练，帮你快速形成肌肉记忆。">
     <meta name="keywords" content="小鹤双拼, 双拼练习, 双拼打字, 在线打字练习, 小鹤双拼方案">
@@ -342,7 +342,7 @@
             border: 1px solid #f5c6cb;
         }
 
-        /* 键盘布局样式 */
+        /* 键盘布局样式 - 默认隐藏，通过JS控制显示 */
         .keyboard-layout {
             background: #f8f9fa;
             border-radius: 10px;
@@ -351,11 +351,12 @@
             display: block;
             max-height: 0;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.3s ease;
             opacity: 0;
             border: 1px solid #e9ecef;
             position: relative;
             width: 100%;
+            box-sizing: border-box;
         }
 
         /* 高亮按键样式 */
@@ -376,10 +377,11 @@
             align-items: center;
             gap: 6px;
             user-select: none;
+            z-index: 5;
         }
 
         .keyboard-layout.show {
-            max-height: 250px;
+            max-height: 400px; /* 足够容纳键盘 */
             opacity: 1;
             padding: 10px;
             border-color: #e9ecef;
@@ -391,7 +393,7 @@
             text-align: center;
             font-size: 18px;
             color: #333;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             font-weight: bold;
         }
 
@@ -399,25 +401,29 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            padding: 10px;
+            gap: 3px;
+            padding: 6px 4px;
             background: #f8f9fa;
             border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .keyboard-row {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 1px;
+            gap: 2px;
+            width: 100%;
+            flex-wrap: nowrap;
         }
 
-        /* 按键样式 */
+        /* 按键样式 - 使用相对单位，便于缩放 */
         .key {
             background: white;
             border: 1px solid #ddd;
             border-radius: 5px;
-            padding: 8px 4px;
+            padding: 4px 2px;
             text-align: center;
             font-size: 11px;
             transition: all 0.3s ease;
@@ -427,19 +433,23 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            flex-shrink: 0;
+            box-sizing: border-box;
         }
         
         .key .letter {
             font-size: 16px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
+            line-height: 1.2;
         }
         
         .key .mapping {
             font-size: 10px;
             color: #666;
-            line-height: 1.1;
+            line-height: 1.2;
+            text-align: center;
         }
 
         .key.empty {
@@ -447,7 +457,10 @@
             border: none;
             box-shadow: none;
             cursor: default;
-            min-width: 20px;
+            min-width: 16px;
+            width: auto;
+            flex: 0 0 16px;
+            visibility: hidden;
         }
         
         /* 响应式设计 - 针对移动设备的优化 */
@@ -458,7 +471,7 @@
             }
             
             .container {
-                padding: 20px;
+                padding: 16px 12px;
                 margin: 0;
                 border-radius: 15px;
             }
@@ -472,20 +485,20 @@
             }
             
             .chapter-selector {
-                gap: 10px;
+                gap: 8px;
             }
             
             .chapter-card {
-                min-height: 80px;
-                padding: 15px;
+                min-height: 70px;
+                padding: 12px 8px;
             }
             
             .chapter-title {
-                font-size: 16px;
+                font-size: 15px;
             }
             
             .chapter-desc {
-                font-size: 12px;
+                font-size: 11px;
             }
             
             .word-display {
@@ -501,8 +514,8 @@
             
             .header-controls {
                 flex-direction: column;
-                gap: 15px;
-                padding: 0 10px;
+                gap: 12px;
+                padding: 0 4px;
             }
             
             .left-controls, .right-controls {
@@ -512,15 +525,16 @@
             
             .control-button,
             .home-button-secondary {
-                padding: 8px 16px;
+                padding: 8px 14px;
                 font-size: 13px;
-                min-width: 100px;
+                min-width: 80px;
+                height: 36px;
             }
             
             .stats {
                 flex-direction: column;
                 align-items: center;
-                gap: 10px;
+                gap: 8px;
             }
             
             .stat-item {
@@ -532,21 +546,55 @@
                 font-size: 20px;
             }
             
+            /* 移动端键盘缩放：使用vw单位 + transform scale 让键盘自适应 */
             .keyboard-layout.show {
-                max-height: 200px;
+                max-height: 350px;
+                padding: 8px 4px;
             }
-            
+
+            .keyboard-container {
+                gap: 3px;
+                padding: 4px 2px;
+            }
+
+            .keyboard-row {
+                gap: 2px;
+            }
+
+            /* 键位尺寸使用相对单位，根据容器宽度自适应 */
             .key {
-                height: 40px;
-                width: 45px;
+                height: 9vw;
+                width: 9.5vw;
+                padding: 2px 1px;
+                border-radius: 4px;
+                min-width: 28px;
+                min-height: 28px;
             }
-            
+
             .key .letter {
-                font-size: 14px;
+                font-size: 2.8vw;
+                margin-bottom: 0;
             }
-            
+
             .key .mapping {
-                font-size: 9px;
+                font-size: 1.8vw;
+                line-height: 1.1;
+            }
+
+            .key.empty {
+                min-width: 8px;
+                flex: 0 0 8px;
+            }
+
+            .keyboard-title {
+                font-size: 15px;
+                margin-bottom: 6px;
+            }
+
+            .highlight-toggle {
+                font-size: 11px;
+                top: 4px;
+                right: 6px;
             }
 
             .selector-actions {
@@ -557,56 +605,67 @@
             .home-button-primary {
                 width: 100%;
                 min-width: unset;
+                padding: 12px 20px;
+                font-size: 16px;
             }
         }
         
         @media (max-width: 480px) {
             .container {
-                padding: 15px;
+                padding: 12px 8px;
             }
             
             .word-display {
-                font-size: 30px;
+                font-size: 28px;
             }
             
             .answer-display {
-                font-size: 20px;
+                font-size: 18px;
                 padding: 10px;
             }
             
             .realtime-input {
-                width: 160px;
-                font-size: 20px;
+                width: 150px;
+                font-size: 18px;
+                padding: 10px 16px;
             }
-            
-            .keyboard-layout.show {
-                max-height: 180px;
-            }
-            
+
+            /* 极小屏进一步缩小键盘 */
             .key {
-                height: 35px;
-                width: 40px;
-                padding: 5px 2px;
+                height: 8.5vw;
+                width: 9vw;
+                min-width: 24px;
+                min-height: 24px;
             }
-            
+
             .key .letter {
-                font-size: 12px;
+                font-size: 2.6vw;
             }
-            
+
             .key .mapping {
-                font-size: 8px;
+                font-size: 1.6vw;
+            }
+
+            .key.empty {
+                min-width: 6px;
+                flex: 0 0 6px;
+            }
+
+            .keyboard-layout.show {
+                max-height: 300px;
+                padding: 6px 2px;
             }
         }
         
         /* 移动端触摸反馈优化 */
         @media (hover: none) and (pointer: coarse) {
             .chapter-card:active:not(.empty) {
-                transform: scale(0.98);
+                transform: scale(0.97);
             }
             
             .control-button:active,
             .home-button-secondary:active {
-                transform: scale(0.98);
+                transform: scale(0.97);
             }
             
             .realtime-input {
@@ -671,7 +730,7 @@
                 <div class="chapter-title">第9章</div>
                 <div class="chapter-desc">ua、uai、iong</div>
             </div>
-            <!-- 只保留返回首页按钮，删除开始练习按钮 -->
+            <!-- 只保留返回首页按钮 -->
             <div class="selector-actions">
                 <a href="index.html" class="home-button-primary">🏠 回首页</a>
             </div>
@@ -681,7 +740,6 @@
             <div class="header-controls">
                 <div class="left-controls">
                     <button class="control-button" id="backToChapters">返回章节</button>
-                    <!-- 返回首页按钮（与返回章节样式一致） -->
                     <a href="index.html" class="home-button-secondary">🏠 回首页</a>
                 </div>
                 <div class="right-controls">
@@ -1415,7 +1473,7 @@
                 this.cacheDomElements();
                 // 绑定事件监听器
                 this.bindEvents();
-                // 适应移动设备
+                // 适应移动设备 - 不再默认显示键盘
                 this.adaptToDevice();
             }
         
@@ -1472,20 +1530,29 @@
              * @returns {boolean} 是否为移动设备
              */
             detectMobile() {
-                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
             }
         
             /**
-             * 根据设备类型调整界面
+             * 根据设备类型调整界面 - 移动端默认不显示键盘
              */
             adaptToDevice() {
+                // 移动设备上不自动显示键盘，由用户手动点击"按键图"按钮控制
                 if (this.isMobile) {
-                    // 移动设备上默认显示虚拟键盘
-                    this.elements.keyboardToggle.click();
-                    // 禁用默认的下拉刷新行为
-                    document.addEventListener('touchmove', (e) => {
-                        if (window.scrollY === 0) e.preventDefault();
-                    }, { passive: false });
+                    // 确保键盘初始为隐藏状态
+                    const keyboard = this.elements.keyboardLayout;
+                    if (keyboard) {
+                        keyboard.classList.remove('show');
+                        keyboard.style.maxHeight = '0';
+                        keyboard.style.opacity = '0';
+                        keyboard.style.padding = '0';
+                    }
+                    this.showKeyboard = false;
+                    const btn = this.elements.keyboardToggle;
+                    if (btn) {
+                        btn.classList.remove('active');
+                        btn.textContent = '按键图';
+                    }
                 }
             }
         
@@ -1864,24 +1931,26 @@
                 const keyboard = this.elements.keyboardLayout;
                 
                 // 添加过渡动画
-                keyboard.style.transition = 'max-height 0.3s ease, opacity 0.3s ease';
+                keyboard.style.transition = 'max-height 0.35s ease, opacity 0.3s ease, padding 0.3s ease';
                 
                 if (this.showKeyboard) {
                     btn.classList.add('active');
                     btn.textContent = '隐藏键盘';
                     keyboard.classList.add('show');
-                    keyboard.style.maxHeight = '500px';
+                    keyboard.style.maxHeight = '400px';
                     keyboard.style.opacity = '1';
+                    keyboard.style.padding = '10px';
                     // 打开键盘时同步高亮（如果已启用）
                     this.updateHighlights();
                 } else {
                     btn.classList.remove('active');
-                    btn.textContent = '显示键盘';
+                    btn.textContent = '按键图';
                     keyboard.style.maxHeight = '0';
                     keyboard.style.opacity = '0';
+                    keyboard.style.padding = '0';
                     setTimeout(() => {
                         keyboard.classList.remove('show');
-                    }, 300);
+                    }, 350);
                 }
             }
         
