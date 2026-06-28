@@ -6,6 +6,18 @@
   <title>小鹤双拼在线练习 - 免费打字训练平台</title>
   <meta name="description" content="专业的小鹤双拼打字练习工具。提供键位提示与实时反馈，无需下载，打开即练，帮你快速形成肌肉记忆。">
   <meta name="keywords" content="小鹤双拼, 双拼练习, 双拼打字, 在线打字练习, 小鹤双拼方案">
+  
+  <!-- PWA 基础配置 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="小鹤双拼">
+  
+  <!-- 使用键盘相关的网络图标 -->
+  <link rel="icon" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/svgs/solid/keyboard.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/svgs/solid/keyboard.svg">
+  
   <style>
     /* 全局重置 & 统一风格 */
     * {
@@ -185,7 +197,7 @@
     <div class="home-grid">
       <!-- 词语练习 → pin.html -->
       <a class="home-btn word-btn" href="pin.html" role="button">
-        <span class="icon">📝</span>
+        <span class="icon">⌨️</span>
         词语练习
       </a>
 
@@ -200,5 +212,16 @@
       <span>小鹤双拼·在线练习</span>
     </div>
   </div>
+
+  <!-- Service Worker 注册 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('✅ Service Worker 注册成功', reg.scope))
+          .catch(err => console.warn('⚠️ Service Worker 注册失败', err));
+      });
+    }
+  </script>
 </body>
 </html>
