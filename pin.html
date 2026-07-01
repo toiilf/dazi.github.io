@@ -233,7 +233,7 @@
             text-align: center;
         }
 
-        /* 双拼码显示样式 */
+        /* 答案显示样式 */
         .answer-display {
             font-size: 24px;
             color: #667eea;
@@ -268,7 +268,7 @@
             text-align: center;
             width: 250px;
             font-family: 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
-            text-transform: none;
+            text-transform: lowercase;
             transition: all 0.3s ease;
             display: block;
             margin: 0 auto 30px;
@@ -684,7 +684,7 @@
     <div class="container">
         <div class="header">
             <h1 class="title">小鹤双拼练习</h1>
-            <p class="subtitle">词语练习 - 请输入对应的汉字</p>
+            <p class="subtitle">词语练习 - 请输入词语的双拼码</p>
         </div>
 
         <div id="chapterSelector" class="chapter-selector">
@@ -743,7 +743,7 @@
                     <a href="index.html" class="home-button-secondary">🏠 回首页</a>
                 </div>
                 <div class="right-controls">
-                    <button class="control-button" id="answerToggle">显示双拼码</button>
+                    <button class="control-button" id="answerToggle">显示答案</button>
                     <button class="control-button" id="keyboardToggle">显示键盘</button>
                 </div>
             </div>
@@ -752,7 +752,7 @@
             
             <div class="answer-display hidden" id="answerDisplay"></div>
             
-            <input type="text" class="realtime-input" id="realtimeInput" placeholder="输入汉字..." autocomplete="off">
+            <input type="text" class="realtime-input" id="realtimeInput" maxlength="4" autocomplete="off">
 
             <div class="stats">
                 <div class="stat-item">
@@ -1602,7 +1602,7 @@
                         e.preventDefault();
                         this.nextWord();
                     }
-                    // Tab键切换双拼码显示
+                    // Tab键切换答案显示
                     else if (e.key === 'Tab') {
                         e.preventDefault();
                         this.toggleAnswer();
@@ -1719,19 +1719,12 @@
                 this.elements.currentWord.textContent = word;
                 this.elements.realtimeInput.value = '';
                 
-                // 首次显示时保留placeholder提示，后续清空
-                if (this.currentIndex === 0) {
-                    this.elements.realtimeInput.placeholder = '输入汉字...';
-                } else {
-                    this.elements.realtimeInput.placeholder = '';
-                }
-                
                 // 重置输入框样式和微交互
                 const input = this.elements.realtimeInput;
                 input.classList.remove('correct', 'incorrect');
                 input.style.transition = 'all 0.2s ease';
                 
-                // 根据设置决定是否显示双拼码
+                // 根据设置决定是否显示答案
                 if (this.showAnswer) {
                     const converted = this.getWordShuangpin(word);
                     this.elements.answerDisplay.textContent = converted;
@@ -1767,12 +1760,16 @@
             }
         
             /**
-             * 处理用户输入，验证输入是否正确 - 输入汉字验证
+             * 处理用户输入，验证输入是否正确
              * @param {string} value - 用户输入的内容
              */
             handleInput(value) {
                 const word = this.currentWords[this.currentIndex];
+                const converted = this.getWordShuangpin(word);
+                
                 const input = this.elements.realtimeInput;
+                const lowerValue = value.toLowerCase();
+                const lowerConverted = converted.toLowerCase();
                 
                 // 空输入时清除样式
                 if (value.length === 0) {
@@ -1780,31 +1777,32 @@
                     return;
                 }
                 
-                // 检查用户输入的汉字是否与当前词汇完全匹配
-                if (value === word) {
+                // 逐字母验证：检查用户输入的前n位是否与答案的前n位匹配
+                const userPrefix = lowerValue;
+                const correctPrefix = lowerConverted.substring(0, value.length);
+                
+                // 完全匹配答案（4位全部正确）
+                if (value.length === 4) {
                     this.attemptCount++;
-                    input.classList.add('correct');
-                    input.classList.remove('incorrect');
                     
-                    // 添加微交互效果
-                    input.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        input.style.transform = 'scale(1)';
-                    }, 200);
-                    
-                    // 只统计首次正确的情况
-                    if (!this.wordStatus[this.currentIndex]) {
-                        this.correctCount++;
-                        this.wordStatus[this.currentIndex] = true;
-                    }
-                    
-                    // 短暂延迟后自动进入下一个词汇
-                    setTimeout(() => this.nextWord(), 300);
-                } else {
-                    // 检查是否部分匹配（前缀匹配）
-                    if (value.length <= word.length && word.startsWith(value)) {
+                    if (lowerValue === lowerConverted) {
+                        input.classList.add('correct');
                         input.classList.remove('incorrect');
-                        input.classList.remove('correct');
+                        
+                        // 添加微交互效果
+                        input.style.transform = 'scale(1.05)';
+                        setTimeout(() => {
+                            input.style.transform = 'scale(1)';
+                        }, 200);
+                        
+                        // 只统计首次正确的情况
+                        if (!this.wordStatus[this.currentIndex]) {
+                            this.correctCount++;
+                            this.wordStatus[this.currentIndex] = true;
+                        }
+                        
+                        // 短暂延迟后自动进入下一个词汇
+                        setTimeout(() => this.nextWord(), 300);
                     } else {
                         input.classList.add('incorrect');
                         input.classList.remove('correct');
@@ -1818,9 +1816,19 @@
                             input.style.transform = 'translateX(0)';
                         }, 100);
                     }
+                    
+                    this.updateStats();
                 }
-                
-                this.updateStats();
+                // 前缀匹配：输入的前n位与答案的前n位完全一致
+                else if (userPrefix === correctPrefix) {
+                    input.classList.remove('incorrect');
+                    // 不添加任何样式，保持默认
+                }
+                // 任何位置不匹配：显示错误
+                else {
+                    input.classList.add('incorrect');
+                    input.classList.remove('correct');
+                }
             }
         
             /**
@@ -1884,7 +1892,7 @@
             }
         
             /**
-             * 切换双拼码显示状态
+             * 切换答案显示状态
              */
             toggleAnswer() {
                 this.showAnswer = !this.showAnswer;
@@ -1892,7 +1900,7 @@
                 
                 if (this.showAnswer) {
                     btn.classList.add('active');
-                    btn.textContent = '隐藏双拼码';
+                    btn.textContent = '隐藏答案';
                     // 添加过渡动画
                     this.elements.answerDisplay.style.transition = 'opacity 0.3s ease';
                     this.elements.answerDisplay.style.opacity = '0';
@@ -1905,7 +1913,7 @@
                     }, 100);
                 } else {
                     btn.classList.remove('active');
-                    btn.textContent = '显示双拼码';
+                    btn.textContent = '显示答案';
                     // 添加过渡动画
                     this.elements.answerDisplay.style.opacity = '0';
                     setTimeout(() => {
