@@ -462,6 +462,89 @@
             flex: 0 0 16px;
             visibility: hidden;
         }
+
+        /* 模态弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 24px;
+            padding: 40px 35px;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+        }
+        .modal-overlay.active .modal-box {
+            transform: scale(1) translateY(0);
+        }
+        .modal-box h3 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        .modal-box p {
+            font-size: 16px;
+            color: #555;
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        .modal-box .stat-highlight {
+            color: #667eea;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        .modal-actions {
+            margin-top: 28px;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .modal-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            background: #5a6fd6;
+        }
+        .modal-btn.secondary {
+            background: #e9ecef;
+            color: #333;
+            box-shadow: none;
+        }
+        .modal-btn.secondary:hover {
+            background: #dde0e4;
+        }
         
         /* 响应式设计 - 针对移动设备的优化 */
         @media (max-width: 768px) {
@@ -608,6 +691,9 @@
                 padding: 12px 20px;
                 font-size: 16px;
             }
+            .modal-box {
+                padding: 30px 20px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -683,8 +769,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">小鹤双拼练习</h1>
-            <p class="subtitle">词语练习 - 请输入词语的双拼码</p>
+            <h1 class="title">小鹤双拼 · 词语练习</h1>
+            <p class="subtitle">词语练习 - 聚焦每个汉字的双拼码，快速形成肌肉记忆。</p>
         </div>
 
         <div id="chapterSelector" class="chapter-selector">
@@ -692,8 +778,6 @@
                 <div class="chapter-title">第0章</div>
                 <div class="chapter-desc">Zh、Ch、Sh</div>
             </div>
-            <div class="chapter-card empty" data-chapter="-1"></div>
-            <div class="chapter-card empty" data-chapter="-2"></div>
             <div class="chapter-card" data-chapter="1">
                 <div class="chapter-title">第1章</div>
                 <div class="chapter-desc">ian、ing、an</div>
@@ -752,7 +836,8 @@
             
             <div class="answer-display hidden" id="answerDisplay"></div>
             
-            <input type="text" class="realtime-input" id="realtimeInput" maxlength="4" autocomplete="off">
+            <!-- 添加 placeholder 提示，与 dan.html 保持一致 -->
+            <input type="text" class="realtime-input" id="realtimeInput" maxlength="4" autocomplete="off" placeholder="双拼码">
 
             <div class="stats">
                 <div class="stat-item">
@@ -812,6 +897,21 @@
              </div>
          </div>
      </div>
+
+     <!-- 完成弹窗 Modal -->
+    <div class="modal-overlay" id="completionModal">
+        <div class="modal-box">
+            <h3>🎉 章节完成！</h3>
+            <p>总词汇：<span class="stat-highlight" id="modalTotal">0</span> 个</p>
+            <p>正确回答：<span class="stat-highlight" id="modalCorrect">0</span> 个</p>
+            <p>尝试次数：<span class="stat-highlight" id="modalAttempts">0</span> 次</p>
+            <p>正确率：<span class="stat-highlight" id="modalAccuracy">0%</span></p>
+            <div class="modal-actions">
+                <button class="modal-btn" id="modalBackToChapters">📚 返回章节</button>
+                <button class="modal-btn secondary" id="modalContinue">继续练习</button>
+            </div>
+        </div>
+    </div>
 
      <script>
         const SHUANGPIN_DATA = {
@@ -1475,6 +1575,49 @@
                 this.bindEvents();
                 // 适应移动设备 - 不再默认显示键盘
                 this.adaptToDevice();
+                // 设置弹窗
+                this.setupModal();
+            }
+
+            setupModal() {
+                this.modal = document.getElementById('completionModal');
+                this.modalBackBtn = document.getElementById('modalBackToChapters');
+                this.modalContinueBtn = document.getElementById('modalContinue');
+                this.modalTotal = document.getElementById('modalTotal');
+                this.modalCorrect = document.getElementById('modalCorrect');
+                this.modalAttempts = document.getElementById('modalAttempts');
+                this.modalAccuracy = document.getElementById('modalAccuracy');
+
+                this.modalBackBtn.addEventListener('click', () => {
+                    this.closeModal();
+                    this.backToChapters();
+                });
+                this.modalContinueBtn.addEventListener('click', () => {
+                    this.closeModal();
+                    // 重新打乱当前章节继续练习
+                    if (this.currentChapter !== null) {
+                        this.startPracticeWithChapter(this.currentChapter);
+                    }
+                });
+                this.modal.addEventListener('click', (e) => {
+                    if (e.target === this.modal) {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            openModal(data) {
+                this.modalTotal.textContent = data.total || 0;
+                this.modalCorrect.textContent = data.correct || 0;
+                this.modalAttempts.textContent = data.attempts || 0;
+                this.modalAccuracy.textContent = data.accuracy + '%';
+                this.modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            closeModal() {
+                this.modal.classList.remove('active');
+                document.body.style.overflow = '';
             }
         
             /**
@@ -1846,7 +1989,7 @@
             }
         
             /**
-             * 显示章节完成信息
+             * 显示章节完成信息 - 使用弹窗
              */
             showCompletion() {
                 // 计算正确率，确保不会超过100%
@@ -1854,20 +1997,20 @@
                     ? Math.min(Math.round((this.correctCount / this.attemptCount) * 100), 100) 
                     : 0;
                 
-                this.showMessage(`
-                    <h3>章节完成！</h3>
-                    <p>总词汇：${this.currentWords.length} 个</p>
-                    <p>正确回答：${this.correctCount} 个</p>
-                    <p>尝试次数：${this.attemptCount} 次</p>
-                    <p>正确率：${accuracy}%</p>
-                    <button onclick="app.backToChapters()" class="control-button" style="margin-top: 10px;">返回章节</button>
-                `, 'success');
+                // 使用弹窗替代原来的message
+                this.openModal({
+                    total: this.currentWords.length,
+                    correct: this.correctCount,
+                    attempts: this.attemptCount,
+                    accuracy: accuracy
+                });
             }
         
             /**
              * 返回章节选择界面
              */
             backToChapters() {
+                this.closeModal();
                 this.elements.chapterSelector.style.display = 'grid';
                 this.elements.practiceArea.style.display = 'none';
                 this.currentChapter = null;
