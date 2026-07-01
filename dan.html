@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>小鹤双拼在线练习 - 免费打字训练平台</title>
+    <meta name="description" content="专业的小鹤双拼打字练习工具。提供键位提示与实时反馈，无需下载，打开即练，帮你快速形成肌肉记忆。">
+    <meta name="keywords" content="小鹤双拼, 双拼练习, 双拼打字, 在线打字练习, 小鹤双拼方案">
+    <style>
+        /* ===== 全局重置 & 基础 ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: start;
+            padding: 20px;
+            padding-top: 5%;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        /* ===== 头部 ===== */
+        .header { text-align: center; margin-bottom: 30px; }
+        .title { font-size: 32px; color: #333; margin-bottom: 6px; }
+        .subtitle { color: #666; font-size: 16px; }
+
+        /* ===== 章节选择 ===== */
+        .chapter-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .chapter-card {
+            background: #f8f9fa;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .chapter-card.empty {
+            visibility: hidden;
+            pointer-events: none;
+            border: none;
+            background: transparent;
+        }
+        .chapter-card:hover:not(.empty) {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .chapter-card.selected {
+            border-color: #38b2ac;
+            background-color: #f0fff4;
+            box-shadow: 0 5px 15px rgba(56,178,172,0.2);
+        }
+        .chapter-title { font-weight: 600; font-size: 18px; }
+        .chapter-desc { font-size: 14px; color: #555; margin-top: 4px; }
+
+        .selector-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            margin-top: 24px;
+        }
+        .home-button-primary {
+            padding: 14px 36px;
+            font-size: 18px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+        }
+        .home-button-primary:hover { background: #5a6fd6; transform: translateY(-2px); }
+
+        /* ===== 练习区 ===== */
+        .practice-area {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 30px 20px 20px;
+            width: 100%;
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .left-controls, .right-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .control-button {
+            padding: 8px 18px;
+            font-size: 14px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        .control-button:hover { background: #764ba2; transform: translateY(-1px); }
+        .control-button.active { background: #38b2ac; }
+
+        .home-button-secondary {
+            padding: 8px 18px;
+            font-size: 14px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        .home-button-secondary:hover { background: #764ba2; transform: translateY(-1px); }
+
+        /* ===== 核心显示 ===== */
+        .word-display {
+            font-size: 72px;
+            color: #222;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: 4px;
+            transition: opacity 0.15s;
+        }
+
+        .answer-display {
+            font-size: 26px;
+            color: #667eea;
+            text-align: center;
+            min-height: 30px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            max-height: 200px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
+        .answer-display.hidden {
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+            opacity: 0;
+            border: none;
+            pointer-events: none;
+        }
+
+        .realtime-input {
+            font-size: 32px;
+            padding: 14px 28px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            text-align: center;
+            width: 260px;
+            font-family: inherit;
+            transition: all 0.25s;
+            display: block;
+            margin: 0 auto 28px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            background: white;
+        }
+        .realtime-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102,126,234,0.15);
+        }
+        .realtime-input.correct { border-color: #4CAF50; background: #f8fff8; }
+        .realtime-input.incorrect { border-color: #f44336; background: #fff8f8; }
+
+        /* ===== 统计 ===== */
+        .stats {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 14px 32px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            min-width: 140px;
+        }
+        .stat-value { font-size: 28px; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 14px; color: #666; margin-top: 4px; }
+
+        /* ===== 消息 ===== */
+        .message {
+            text-align: center;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 10px;
+            font-size: 16px;
+            display: none;
+        }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* ===== 键盘 ===== */
+        .keyboard-layout {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 0;
+            margin-top: 10px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.3s ease;
+            opacity: 0;
+            border: 1px solid #e9ecef;
+            position: relative;
+            width: 100%;
+        }
+        .keyboard-layout.show {
+            max-height: 420px;
+            opacity: 1;
+            padding: 12px 10px 10px;
+            margin-bottom: 10px;
+        }
+        .keyboard-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .highlight-toggle {
+            position: absolute;
+            right: 14px;
+            top: 12px;
+            font-size: 13px;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+            z-index: 5;
+        }
+        .keyboard-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 2px;
+            width: 100%;
+        }
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+            width: 100%;
+        }
+        .key {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 4px 2px;
+            text-align: center;
+            font-size: 11px;
+            transition: all 0.2s;
+            height: 52px;
+            width: 56px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .key .letter { font-size: 17px; font-weight: 700; color: #222; line-height: 1.2; }
+        .key .mapping { font-size: 10px; color: #666; line-height: 1.2; }
+        .key.empty { background: transparent; border: none; visibility: hidden; width: 18px; flex: 0 0 18px; }
+        .key.highlight {
+            background: linear-gradient(180deg, #fff7e6, #ffe9b0);
+            border-color: #ffa726;
+            box-shadow: 0 4px 12px rgba(255,167,38,0.25);
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
+            body { padding: 10px; padding-top: 10px; }
+            .container { padding: 16px 12px; border-radius: 16px; }
+            .title { font-size: 24px; }
+            .chapter-selector { gap: 8px; }
+            .chapter-card { min-height: 70px; padding: 12px 6px; }
+            .chapter-title { font-size: 15px; }
+            .chapter-desc { font-size: 11px; }
+            .word-display { font-size: 48px; }
+            .realtime-input { width: 180px; font-size: 24px; padding: 10px 16px; }
+            .header-controls { flex-direction: column; align-items: stretch; gap: 8px; }
+            .left-controls, .right-controls { justify-content: center; }
+            .control-button, .home-button-secondary { font-size: 13px; padding: 6px 14px; height: 36px; }
+            .stats .stat-item { min-width: 100px; padding: 10px 16px; }
+            .stat-value { font-size: 22px; }
+
+            .key { height: 9vw; width: 9.5vw; min-width: 30px; min-height: 30px; }
+            .key .letter { font-size: 2.8vw; }
+            .key .mapping { font-size: 1.8vw; }
+            .keyboard-layout.show { max-height: 360px; padding: 8px 4px; }
+            .highlight-toggle { font-size: 11px; top: 6px; right: 6px; }
+        }
+        @media (max-width: 480px) {
+            .word-display { font-size: 38px; }
+            .realtime-input { width: 150px; font-size: 20px; padding: 8px 12px; }
+            .key { height: 8.5vw; width: 9vw; min-width: 24px; min-height: 24px; }
+            .key .letter { font-size: 2.6vw; }
+            .key .mapping { font-size: 1.6vw; }
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .chapter-card:active:not(.empty) { transform: scale(0.97); }
+            .control-button:active, .home-button-secondary:active { transform: scale(0.97); }
+        }
+        *:focus { outline: none; -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 class="title">小鹤双拼练习</h1>
+        <p class="subtitle">单字练习 - 请输入对应的文字</p>
+    </div>
+
+    <!-- ===== 章节选择 ===== -->
+    <div id="chapterSelector" class="chapter-selector">
+        <div class="chapter-card" data-chapter="0"><div class="chapter-title">第0章</div><div class="chapter-desc">Zh、Ch、Sh</div></div>
+        <div class="chapter-card empty"></div>
+        <div class="chapter-card empty"></div>
+        <div class="chapter-card" data-chapter="1"><div class="chapter-title">第1章</div><div class="chapter-desc">ian、ing、an</div></div>
+        <div class="chapter-card" data-chapter="2"><div class="chapter-title">第2章</div><div class="chapter-desc">ong、ao、ang</div></div>
+        <div class="chapter-card" data-chapter="3"><div class="chapter-title">第3章</div><div class="chapter-desc">eng、ai、ui</div></div>
+        <div class="chapter-card" data-chapter="4"><div class="chapter-title">第4章</div><div class="chapter-desc">en、uo、in</div></div>
+        <div class="chapter-card" data-chapter="5"><div class="chapter-title">第5章</div><div class="chapter-desc">iao、ou、iang</div></div>
+        <div class="chapter-card" data-chapter="6"><div class="chapter-title">第6章</div><div class="chapter-desc">uan、iu、ie</div></div>
+        <div class="chapter-card" data-chapter="7"><div class="chapter-title">第7章</div><div class="chapter-desc">ei、ia、üan</div></div>
+        <div class="chapter-card" data-chapter="8"><div class="chapter-title">第8章</div><div class="chapter-desc">un/ün、ue/üe、uang</div></div>
+        <div class="chapter-card" data-chapter="9"><div class="chapter-title">第9章</div><div class="chapter-desc">ua、uai、iong</div></div>
+        <div class="selector-actions">
+            <a href="index.html" class="home-button-primary">🏠 回首页</a>
+        </div>
+    </div>
+
+    <!-- ===== 练习区 ===== -->
+    <div id="practiceArea" class="practice-area">
+        <div class="header-controls">
+            <div class="left-controls">
+                <button class="control-button" id="backToChapters">← 返回章节</button>
+                <a href="index.html" class="home-button-secondary">🏠 首页</a>
+            </div>
+            <div class="right-controls">
+                <button class="control-button" id="answerToggle">显示双拼码</button>
+                <button class="control-button" id="keyboardToggle">显示键盘</button>
+            </div>
+        </div>
+
+        <div class="word-display" id="currentWord">选择章节</div>
+        <div class="answer-display hidden" id="answerDisplay"></div>
+
+        <input type="text" class="realtime-input" id="realtimeInput" placeholder="输入单字..." autocomplete="off">
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="accuracy">100%</div>
+                <div class="stat-label">正确率</div>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <!-- 键盘 -->
+        <div class="keyboard-layout" id="keyboardLayout">
+            <div class="keyboard-title">小鹤双拼键位图</div>
+            <label class="highlight-toggle"><input type="checkbox" id="highlightToggle"> 高亮按键</label>
+            <div class="keyboard-container">
+                <div class="keyboard-row">
+                    <div class="key"><div class="letter">Q</div><div class="mapping">iu</div></div>
+                    <div class="key"><div class="letter">W</div><div class="mapping">ei</div></div>
+                    <div class="key"><div class="letter">E</div><div class="mapping">e</div></div>
+                    <div class="key"><div class="letter">R</div><div class="mapping">uan</div></div>
+                    <div class="key"><div class="letter">T</div><div class="mapping">ve/ue</div></div>
+                    <div class="key"><div class="letter">Y</div><div class="mapping">un</div></div>
+                    <div class="key"><div class="letter">U</div><div class="mapping">u/sh</div></div>
+                    <div class="key"><div class="letter">I</div><div class="mapping">i/ch</div></div>
+                    <div class="key"><div class="letter">O</div><div class="mapping">o/uo</div></div>
+                    <div class="key"><div class="letter">P</div><div class="mapping">ie</div></div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key empty"></div>
+                    <div class="key"><div class="letter">A</div><div class="mapping">a</div></div>
+                    <div class="key"><div class="letter">S</div><div class="mapping">ong/iong</div></div>
+                    <div class="key"><div class="letter">D</div><div class="mapping">ai</div></div>
+                    <div class="key"><div class="letter">F</div><div class="mapping">en</div></div>
+                    <div class="key"><div class="letter">G</div><div class="mapping">eng</div></div>
+                    <div class="key"><div class="letter">H</div><div class="mapping">ang</div></div>
+                    <div class="key"><div class="letter">J</div><div class="mapping">an</div></div>
+                    <div class="key"><div class="letter">K</div><div class="mapping">ing/uai</div></div>
+                    <div class="key"><div class="letter">L</div><div class="mapping">iang/uang</div></div>
+                    <div class="key empty"></div>
+                </div>
+                <div class="keyboard-row">
+                    <div class="key empty"></div>
+                    <div class="key"><div class="letter">Z</div><div class="mapping">ou</div></div>
+                    <div class="key"><div class="letter">X</div><div class="mapping">ia/ua</div></div>
+                    <div class="key"><div class="letter">C</div><div class="mapping">ao</div></div>
+                    <div class="key"><div class="letter">V</div><div class="mapping">ui/zh</div></div>
+                    <div class="key"><div class="letter">B</div><div class="mapping">in</div></div>
+                    <div class="key"><div class="letter">N</div><div class="mapping">iao</div></div>
+                    <div class="key"><div class="letter">M</div><div class="mapping">ian</div></div>
+                    <div class="key empty"></div>
+                    <div class="key empty"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    //  1. 原始词语 -> 双拼码 数据（完整）
+    // ============================================================
+    const RAW_SHUANGPIN = {
+        0: { "驻扎":"vuva", "这个":"vege", "打折":"dave", "遮住":"vevu", "记者":"jive", "哲理":"veli", "值得":"vide", "预知":"yuvi", "只是":"viui", "指示":"viui", "支付":"vifu", "至于":"viyu", "一直":"yivi", "预制":"yuvi", "智力":"vili", "芝士":"viui", "主席":"vuxi", "竹子":"vuzi", "珠子":"vuzi", "祝贺":"vuhe", "助理":"vuli", "业主":"yevu", "不差":"buia", "普查":"puia", "插入":"iaru", "夜叉":"yeia", "喝茶":"heia", "汽车":"qiie", "彻底":"iedi", "撤去":"iequ", "吃喝":"iihe", "尺子":"iizi", "扶持":"fuii", "池子":"iizi", "智齿":"viii", "迟了":"iile", "出去":"iuqu", "处理":"iuli", "厨具":"iuju", "触摸":"iumo", "除法":"iufa", "傻子":"uazi", "沙子":"uazi", "鲨鱼":"uayu", "大厦":"daua", "设计":"ueji", "射击":"ueji", "摄入":"ueru", "涉及":"ueji", "毒蛇":"duue", "是的":"uide", "及时":"jiui", "十个":"uige", "测试":"ceui", "历史":"liui", "师傅":"uifu", "实际":"uiji", "故事":"guui", "数据":"uuju", "读书":"duuu", "叔叔":"uuuu", "法术":"fauu", "树木":"uumu", "竖起":"uuqi", "输了":"uule", "属于":"uuyu", "舒服":"uufu", "拘束":"juuu" },
+        1: { "变大":"bmda", "路边":"lubm", "鞭子":"bmzi", "便利":"bmli", "遍地":"bmdi", "编辑":"bmji", "卡片":"kapm", "骗子":"pmzi", "偏偏":"pmpm", "面子":"mmzi", "避免":"bimm", "入眠":"rumm", "勉励":"mmli", "几点":"jidm", "典礼":"dmli", "电机":"dmji", "气垫":"qidm", "店铺":"dmpu", "一天":"yitm", "填词":"tmci", "田野":"tmye", "甜蜜":"tmmi", "去年":"qunm", "纪念":"jinm", "迷恋":"milm", "打脸":"dalm", "联合":"lmhe", "练字":"lmzi", "大连":"dalm", "减法":"jmfa", "比肩":"bijm", "意见":"yijm", "附件":"fujm", "笔尖":"bijm", "福建":"fujm", "拔剑":"bajm", "渐渐":"jmjm", "以前":"yiqm", "千米":"qmmi", "欠钱":"qmqm", "牙签":"yaqm", "仙气":"xmqi", "路线":"luxm", "显现":"xmxm", "嫌弃":"xmqi", "病情":"bkqk", "平安":"pkan", "姓名":"xkmk", "预定":"yudk", "倾听":"qktk", "宁静":"nkjk", "领地":"lkdi", "精细":"jkxi", "情绪":"qkxu", "不行":"buxk", "星星":"xkxk", "硬币":"ykbi", "班级":"bjji", "半个":"bjge", "办理":"bjli", "打扮":"dabj", "批判":"pipj", "盘子":"pjzi", "慢慢":"mjmj", "满足":"mjzu", "野蛮":"yemj", "米饭":"mifj", "反思":"fjsi", "但凡":"djfj", "孤单":"gudj", "鸡蛋":"jidj", "子弹":"zidj", "弹力":"tjli", "谈判":"tjpj", "探测":"tjce", "男子":"njzi", "难题":"njti", "河南":"henj", "蓝色":"ljse", "栏杆":"ljgj", "感激":"gjji", "看齐":"kjqi", "刊物":"kjwu", "含糊":"hjhu", "大喊":"dahj", "忽然":"hurj", "赞叹":"zjtj", "三个":"sjge", "发散":"fasj", "烟雾":"yjwu", "研发":"yjfa", "延误":"yjwu", "贪玩":"tjwj", "完了":"wjle", "夜晚":"yewj" },
+        2: { "东西":"dsxi", "普通":"puts", "农业":"nsye", "恐龙":"ksls", "提供":"tigs", "空隙":"ksxi", "红色":"hsse", "容易":"rsyi", "总部":"zsbu", "服从":"fucs", "送礼":"ssli", "勇气":"ysqi", "包包":"bcbc", "保护":"bchu", "宝宝":"bcbc", "爆发":"bcfa", "跑步":"pcbu", "泡泡":"pcpc", "旗袍":"qipc", "皮毛":"pimc", "帽子":"mczi", "刀法":"dcfa", "道理":"dcli", "到了":"dcle", "倒地":"dcdi", "淘气":"tcqi", "逃避":"tcbi", "大脑":"danc", "打闹":"danc", "老大":"lcda", "捕捞":"bulc", "牢固":"lcgu", "疲劳":"pilc", "高大":"gcda", "告诉":"gcsu", "可靠":"kekc", "思考":"sikc", "你好":"nihc", "号码":"hcma", "豪气":"hcqi", "打扰":"darc", "塑造":"suzc", "早安":"zcan", "洗澡":"xizc", "草地":"ccdi", "体操":"ticc", "扫地":"scdi", "骚扰":"scrc", "不要":"buyc", "撕咬":"siyc", "妖魔":"ycmo", "帮扶":"bhfu", "棒子":"bhzi", "胖子":"phzi", "庞大":"phda", "急忙":"jimh", "莽夫":"mhfu", "放弃":"fhqi", "房子":"fhzi", "防御":"fhyu", "档案":"dhan", "抵挡":"didh", "唐突":"thtu", "熬汤":"aoth", "蜜糖":"mith", "波浪":"bolh", "女郎":"nvlh", "狼藉":"lhji", "刚需":"ghxu", "钢丝":"ghsi", "港剧":"ghju", "抗体":"khti", "安康":"ankh", "启航":"qihh", "行业":"hhye", "让步":"rhbu", "肮脏":"ahzh", "仓库":"chku", "桑拿":"shna", "养育":"yhyu", "样子":"yhzi", "氧气":"yhqi", "夕阳":"xiyh", "网吧":"whba", "往往":"whwh", "忘了":"whle" },
+        3: { "崩塌":"bgta", "碰壁":"pgbi", "孟子":"mgzi", "疯子":"fgzi", "等级":"dgji", "图腾":"tutg", "能力":"ngli", "冷气":"lgqi", "土坑":"tukg", "哼哈":"hgha", "增速":"zgsu", "层次":"cgci", "僧侣":"sglv", "富翁":"fuwg", "白色":"bdse", "拜拜":"bdbd", "安排":"anpd", "牌子":"pdzi", "拍卖":"pdmd", "派系":"pdxi", "买课":"mdke", "卖课":"mdke", "埋没":"mdmo", "大麦":"damd", "代替":"ddti", "彩带":"cddd", "待遇":"ddyu", "袋子":"ddzi", "呆子":"ddzi", "黛玉":"ddyu", "太子":"tdzi", "态度":"tddu", "奶奶":"ndnd", "奈何":"ndhe", "来去":"ldqu", "依赖":"yild", "大概":"dagd", "批改":"pigd", "膝盖":"xigd", "乞丐":"qigd", "打开":"dakd", "嗨哟":"hdyo", "孩子":"hdzi", "海鸥":"hdou", "害我":"hdwo", "在吗":"zdma", "再来":"zdld", "猜谜":"cdmi", "财迷":"cdmi", "才来":"cdld", "彩色":"cdse", "菜籽":"cdzi", "器材":"qicd", "塞子":"sdzi", "比赛":"bisd", "鱼鳃":"yusd", "外八":"wdba", "歪了":"wdle", "不对":"budv", "辞退":"citv", "推拿":"tvna", "富贵":"fugv", "击溃":"jikv", "不会":"buhv", "锐利":"rvli", "最大":"zvda", "催促":"cvcu", "破碎":"posv" },
+        4: { "根本":"gfbf", "盆地":"pfdi", "木门":"mumf", "分析":"ffxi", "嫩绿":"nflv", "根据":"gfju", "很大":"hfda", "大人":"darf", "怎么":"zfme", "课文":"kewf", "多余":"doyu", "脱离":"toli", "懦弱":"noro", "逻辑":"loji", "如果":"rugo", "扩大":"koda", "活力":"holi", "弱点":"rodm", "昨日":"zori", "错误":"cowu", "所以":"soyi", "宾客":"bbke", "拼音":"pbyb", "民族":"mbzu", "邻居":"lbju", "如今":"rujb", "侵入":"qbru", "新的":"xbde", "基因":"jiyb" },
+        5: { "表格":"bnge", "表哥":"bnge", "发飙":"fabn", "票据":"pnju", "漂泊":"pnbo", "漂浮":"pnfu", "喵喵":"mnmn", "妙计":"mnji", "去掉":"qudn", "调取":"dnqu", "调度":"dndu", "拉尿":"lann", "撒尿":"sann", "小鸟":"xnnn", "捕鸟":"bunn", "无聊":"wuln", "私聊":"siln", "木料":"muln", "资料":"ziln", "塑料":"suln", "饲料":"siln", "医疗":"yiln", "角度":"jndu", "大叫":"dajn", "提交":"tijn", "搭桥":"daqn", "敲打":"qnda", "巧了":"qnle", "大小":"daxn", "小气":"xnqi", "小马":"xnma", "校服":"xnfu", "母校":"muxn", "大笑":"daxn", "取笑":"quxn", "可笑":"kexn", "取消":"quxn", "消极":"xnji", "潇洒":"xnsa", "剖析":"pzxi", "计谋":"jimz", "否则":"fzze", "打斗":"dadz", "偷偷":"tztz", "遗漏":"yilz", "足够":"zugz", "可口":"kekz", "以后":"yihz", "骨肉":"gurz", "走路":"zzlu", "凑合":"czhe", "搜集":"szji", "有无":"yzwu", "姑娘":"gunl", "测量":"cell", "热量":"rell", "估量":"gull", "两个":"llge", "凄凉":"qill", "凉席":"llxi", "讲课":"jlke", "即将":"jijl", "奖励":"jlli", "江西":"jlxi", "降低":"jldi", "强大":"qlda", "强迫":"qlpo", "墙壁":"qlbi", "步枪":"buql", "机枪":"jiql", "想象":"xlxl", "想起":"xlqi", "香气":"xlqi", "图像":"tuxl", "相互":"xlhu", "项目":"xlmu", "箱子":"xlzi", "大象":"daxl", "象棋":"xlqi" },
+        6: { "隔断":"gedr", "断句":"drju", "异端":"yidr", "端午":"drwu", "段子":"drzi", "短语":"dryu", "短裤":"drku", "团体":"trti", "谜团":"mitr", "集团":"jitr", "暖气":"nrqi", "取暖":"qunr", "胡乱":"hulr", "卵子":"lrzi", "管理":"grli", "关闭":"grbi", "机关":"jigr", "关于":"gryu", "关系":"grxi", "客观":"kegr", "乐观":"legr", "旅馆":"lvgr", "罐子":"grzi", "罚款":"fakr", "宽度":"krdu", "替换":"tihr", "疲软":"pirr", "计算":"jisr", "丢弃":"dqqi", "牛皮":"nqpi", "牛马":"nqma", "蜗牛":"wonq", "按钮":"annq", "河流":"helq", "六个":"lqge", "留意":"lqyi", "拘留":"julq", "依旧":"yijq", "就业":"jqye", "九个":"jqge", "许久":"xujq", "足球":"zuqq", "打球":"daqq", "地球":"diqq", "气球":"qiqq", "哀求":"aiqq", "乞求":"qiqq", "修理":"xqli", "修补":"xqbu", "秀气":"xqqi", "休息":"xqxi", "离别":"libp", "撇捺":"ppna", "熄灭":"ximp", "蝴蝶":"hudp", "补贴":"butp", "拿捏":"nanp", "破裂":"polp", "节日":"jpri", "而且":"erqp", "谢谢":"xpxp" },
+        7: { "杯子":"bwzi", "配偶":"pwou", "没戏":"mwxi", "起飞":"qifw", "内科":"nwke", "类似":"lwsi", "给力":"gwli", "黑色":"hwse", "为了":"wwle", "加入":"jxru", "加密":"jxmi", "加法":"jxfa", "加固":"jxgu", "加价":"jxjx", "架子":"jxzi", "家里":"jxli", "家居":"jxju", "假如":"jxru", "假的":"jxde", "假期":"jxqi", "价格":"jxge", "恰似":"qxsi", "发卡":"faqx", "下雨":"xxyu", "下午":"xxwu", "下去":"xxqu", "阁下":"gexx", "下棋":"xxqi", "卷子":"jrzi", "卷曲":"jrqu", "募捐":"mujr", "捐躯":"jrqu", "全部":"qrbu", "安全":"anqr", "齐全":"qiqr", "全局":"qrju", "选择":"xrze", "选举":"xrju", "选拔":"xrba" },
+        8: { "钝器":"dyqi", "吞吐":"tytu", "理论":"lily", "棍子":"gyzi", "困了":"kyle", "荤素":"hysu", "滋润":"ziry", "自尊":"zizy", "寄存":"jicy", "孙子":"syzi", "君子":"jyzi", "裙子":"qyzi", "讯息":"xyxi", "肆虐":"sint", "忽略":"hult", "策略":"celt", "决绝":"jtjt", "绝句":"jtju", "拒绝":"jujt", "杜绝":"dujt", "麻雀":"maqt", "缺乏":"qtfa", "缺席":"qtxi", "学习":"xtxi", "科学":"kext", "大学":"daxt", "大雪":"daxt", "靴子":"xtzi", "光速":"glsu", "旷野":"klye", "黄色":"hlse" },
+        9: { "西瓜":"xigx", "瓜子":"gxzi", "苦瓜":"kugx", "挂起":"gxqi", "浮夸":"fukx", "跨度":"kxdu", "画画":"hxhx", "画图":"hxtu", "壁画":"bihx", "怪物":"gkwu", "快乐":"kkle", "愉快":"yukk", "快递":"kkdi", "土块":"tukk", "筷子":"kkzi", "坏了":"hkle", "破坏":"pohk", "怀疑":"hkyi", "窘迫":"jspo", "无穷":"wuqs", "穷苦":"qsku", "胸部":"xsbu", "熊大":"xsda", "熊二":"xser", "凶器":"xsqi", "兄弟":"xsdi", "雄起":"xsqi" }
+    };
+
+    // ============================================================
+    //  2. 转换为「单字 + 双拼码前两位」
+    //     规则：取每个词语的第一个字，双拼码截取前两位（若不足两位则保留）
+    // ============================================================
+    const SHUANGPIN_DATA = {};
+    for (const [chIdx, wordMap] of Object.entries(RAW_SHUANGPIN)) {
+        SHUANGPIN_DATA[chIdx] = {};
+        for (const [word, fullCode] of Object.entries(wordMap)) {
+            const firstChar = word.charAt(0);
+            // 取双拼码前两位（小鹤双拼标准码均为两位，但以防万一）
+            const shortCode = fullCode.slice(0, 2);
+            SHUANGPIN_DATA[chIdx][firstChar] = shortCode;
+        }
+    }
+
+    // ============================================================
+    //  3. 章节 -> 按键映射（固定）
+    // ============================================================
+    const CHAPTER_KEY_MAP = {
+        0: ['V','I','U'],
+        1: ['M','K','J'],
+        2: ['S','C','H'],
+        3: ['G','D','V'],
+        4: ['F','O','B'],
+        5: ['N','Z','L'],
+        6: ['R','Q','P'],
+        7: ['W','X','R'],
+        8: ['Y','T','L'],
+        9: ['X','K','S']
+    };
+
+    // ============================================================
+    //  4. 应用主类
+    // ============================================================
+    class ShuangpinPractice {
+        constructor() {
+            this.currentChapter = null;
+            this.currentChars = [];          // 单字列表
+            this.currentIndex = 0;
+            this.correctCount = 0;
+            this.attemptCount = 0;
+            this.charStatus = [];
+            this.showAnswer = false;
+            this.showKeyboard = false;
+            this.isMobile = this.detectMobile();
+            this.selectedChapters = [];
+
+            this.init();
+        }
+
+        init() {
+            this.cacheDom();
+            this.bindEvents();
+            this.adaptToDevice();
+        }
+
+        cacheDom() {
+            this.el = {
+                chapterCards: document.querySelectorAll('.chapter-card'),
+                chapterSelector: document.getElementById('chapterSelector'),
+                practiceArea: document.getElementById('practiceArea'),
+                input: document.getElementById('realtimeInput'),
+                currentWord: document.getElementById('currentWord'),
+                answerDisplay: document.getElementById('answerDisplay'),
+                message: document.getElementById('message'),
+                accuracy: document.getElementById('accuracy'),
+                keyboardLayout: document.getElementById('keyboardLayout'),
+                backToChapters: document.getElementById('backToChapters'),
+                answerToggle: document.getElementById('answerToggle'),
+                keyboardToggle: document.getElementById('keyboardToggle'),
+                highlightToggle: document.getElementById('highlightToggle')
+            };
+
+            // 按键映射
+            this.el.keyMap = {};
+            document.querySelectorAll('.keyboard-container .key').forEach(k => {
+                const letterEl = k.querySelector('.letter');
+                if (letterEl) {
+                    const letter = letterEl.textContent.trim().toUpperCase();
+                    this.el.keyMap[letter] = k;
+                }
+            });
+        }
+
+        detectMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+        }
+
+        adaptToDevice() {
+            if (this.isMobile) {
+                const kb = this.el.keyboardLayout;
+                if (kb) {
+                    kb.classList.remove('show');
+                    kb.style.maxHeight = '0';
+                    kb.style.opacity = '0';
+                    kb.style.padding = '0';
+                }
+                this.showKeyboard = false;
+                const btn = this.el.keyboardToggle;
+                if (btn) { btn.classList.remove('active'); btn.textContent = '显示键盘'; }
+            }
+        }
+
+        bindEvents() {
+            // 章节点击
+            this.el.chapterCards.forEach(card => {
+                card.addEventListener('click', (e) => {
+                    const ch = parseInt(e.currentTarget.dataset.chapter);
+                    if (ch >= 0) {
+                        this.el.chapterCards.forEach(c => c.classList.remove('selected'));
+                        e.currentTarget.classList.add('selected');
+                        this.startPractice(ch);
+                    }
+                });
+            });
+
+            this.el.backToChapters.addEventListener('click', () => this.backToChapters());
+            this.el.answerToggle.addEventListener('click', () => this.toggleAnswer());
+            this.el.keyboardToggle.addEventListener('click', () => this.toggleKeyboard());
+            if (this.el.highlightToggle) {
+                this.el.highlightToggle.addEventListener('change', () => this.updateHighlights());
+            }
+
+            this.el.input.addEventListener('input', (e) => this.handleInput(e.target.value));
+            this.el.input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); this.nextChar(); }
+                else if (e.key === 'Tab') { e.preventDefault(); this.toggleAnswer(); }
+                else if (e.key === ' ') { e.preventDefault(); this.toggleKeyboard(); }
+            });
+
+            window.addEventListener('resize', () => {
+                const was = this.isMobile;
+                this.isMobile = this.detectMobile();
+                if (was !== this.isMobile) this.adaptToDevice();
+            });
+        }
+
+        // ----- 核心逻辑 -----
+        startPractice(chapterIndex) {
+            if (chapterIndex < 0 || chapterIndex >= 10) {
+                this.showMessage('章节无效', 'error');
+                return;
+            }
+            this.currentChapter = chapterIndex;
+            this.selectedChapters = [chapterIndex];
+            const raw = SHUANGPIN_DATA[chapterIndex] || {};
+            this.currentChars = Object.keys(raw);
+            if (this.currentChars.length === 0) {
+                this.showMessage('该章节暂无单字', 'error');
+                return;
+            }
+            // 打乱
+            this.currentChars = this.shuffle([...this.currentChars]);
+
+            this.resetStats();
+            this.el.chapterSelector.style.display = 'none';
+            this.el.practiceArea.style.display = 'block';
+            this.displayCurrentChar();
+            this.updateStats();
+            this.updateHighlights();
+            setTimeout(() => this.el.input.focus(), 100);
+        }
+
+        shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        resetStats() {
+            this.currentIndex = 0;
+            this.correctCount = 0;
+            this.attemptCount = 0;
+            this.charStatus = Array(this.currentChars.length).fill(false);
+        }
+
+        displayCurrentChar() {
+            if (this.currentIndex >= this.currentChars.length) {
+                this.showCompletion();
+                return;
+            }
+            const ch = this.currentChars[this.currentIndex];
+            this.el.currentWord.textContent = ch;
+            this.el.input.value = '';
+            this.el.input.classList.remove('correct', 'incorrect');
+            this.el.input.placeholder = this.currentIndex === 0 ? '输入单字...' : '';
+
+            if (this.showAnswer) {
+                const code = this.getCharCode(ch);
+                this.el.answerDisplay.textContent = code;
+                this.el.answerDisplay.classList.remove('hidden');
+            } else {
+                this.el.answerDisplay.classList.add('hidden');
+            }
+
+            this.el.currentWord.style.opacity = '0.5';
+            setTimeout(() => this.el.currentWord.style.opacity = '1', 100);
+        }
+
+        getCharCode(char) {
+            if (this.selectedChapters && this.selectedChapters.length) {
+                for (const chIdx of this.selectedChapters) {
+                    const map = SHUANGPIN_DATA[chIdx];
+                    if (map && map[char] !== undefined) return map[char];
+                }
+            }
+            return SHUANGPIN_DATA[this.currentChapter]?.[char] || '';
+        }
+
+        handleInput(value) {
+            const target = this.currentChars[this.currentIndex];
+            const input = this.el.input;
+            if (value.length === 0) { input.classList.remove('correct', 'incorrect'); return; }
+
+            if (value === target) {
+                this.attemptCount++;
+                input.classList.add('correct');
+                input.classList.remove('incorrect');
+                if (!this.charStatus[this.currentIndex]) {
+                    this.correctCount++;
+                    this.charStatus[this.currentIndex] = true;
+                }
+                setTimeout(() => this.nextChar(), 280);
+            } else {
+                if (target.startsWith(value)) {
+                    input.classList.remove('incorrect', 'correct');
+                } else {
+                    input.classList.add('incorrect');
+                    input.classList.remove('correct');
+                }
+            }
+            this.updateStats();
+        }
+
+        nextChar() {
+            this.currentIndex++;
+            if (this.currentIndex >= this.currentChars.length) {
+                this.showCompletion();
+            } else {
+                this.displayCurrentChar();
+            }
+            setTimeout(() => this.el.input.focus(), 80);
+        }
+
+        showCompletion() {
+            const acc = this.attemptCount > 0 ? Math.min(Math.round((this.correctCount / this.attemptCount) * 100), 100) : 0;
+            this.showMessage(`
+                <h3>🎉 章节完成！</h3>
+                <p>总字数：${this.currentChars.length} 个</p>
+                <p>正确：${this.correctCount} 个</p>
+                <p>尝试：${this.attemptCount} 次</p>
+                <p>正确率：${acc}%</p>
+                <button onclick="app.backToChapters()" class="control-button" style="margin-top:10px;">返回章节</button>
+            `, 'success');
+        }
+
+        backToChapters() {
+            this.el.chapterSelector.style.display = 'grid';
+            this.el.practiceArea.style.display = 'none';
+            this.currentChapter = null;
+            this.currentChars = [];
+            this.selectedChapters = [];
+            this.resetStats();
+            this.el.chapterCards.forEach(c => c.classList.remove('selected'));
+            this.el.message.style.display = 'none';
+            if (this.showKeyboard) this.toggleKeyboard();
+            this.updateHighlights();
+        }
+
+        toggleAnswer() {
+            this.showAnswer = !this.showAnswer;
+            const btn = this.el.answerToggle;
+            if (this.showAnswer) {
+                btn.classList.add('active');
+                btn.textContent = '隐藏双拼码';
+                const ch = this.currentChars[this.currentIndex];
+                if (ch) {
+                    this.el.answerDisplay.textContent = this.getCharCode(ch);
+                    this.el.answerDisplay.classList.remove('hidden');
+                }
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '显示双拼码';
+                this.el.answerDisplay.classList.add('hidden');
+            }
+        }
+
+        toggleKeyboard() {
+            this.showKeyboard = !this.showKeyboard;
+            const btn = this.el.keyboardToggle;
+            const kb = this.el.keyboardLayout;
+            if (this.showKeyboard) {
+                btn.classList.add('active');
+                btn.textContent = '隐藏键盘';
+                kb.classList.add('show');
+                kb.style.maxHeight = '420px';
+                kb.style.opacity = '1';
+                kb.style.padding = '12px 10px 10px';
+                this.updateHighlights();
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '显示键盘';
+                kb.style.maxHeight = '0';
+                kb.style.opacity = '0';
+                kb.style.padding = '0';
+                setTimeout(() => kb.classList.remove('show'), 350);
+            }
+        }
+
+        updateHighlights() {
+            const toggle = this.el.highlightToggle;
+            const keyMap = this.el.keyMap || {};
+            if (!toggle || !toggle.checked) {
+                Object.values(keyMap).forEach(k => k.classList.remove('highlight'));
+                return;
+            }
+            const letters = new Set();
+            if (this.selectedChapters && this.selectedChapters.length) {
+                this.selectedChapters.forEach(ch => {
+                    const arr = CHAPTER_KEY_MAP[ch];
+                    if (Array.isArray(arr)) arr.forEach(l => letters.add(l.toUpperCase()));
+                });
+            }
+            Object.entries(keyMap).forEach(([letter, el]) => {
+                if (letters.has(letter)) el.classList.add('highlight');
+                else el.classList.remove('highlight');
+            });
+        }
+
+        updateStats() {
+            const acc = this.attemptCount > 0 ? Math.min(Math.round((this.correctCount / this.attemptCount) * 100), 100) : 0;
+            this.el.accuracy.textContent = acc + '%';
+        }
+
+        showMessage(html, type) {
+            const el = this.el.message;
+            el.innerHTML = html;
+            el.className = `message ${type}`;
+            el.style.display = 'block';
+            if (type === 'success') {
+                setTimeout(() => { el.style.display = 'none'; }, 6000);
+            }
+        }
+    }
+
+    // ============================================================
+    //  5. 启动
+    // ============================================================
+    let app;
+    document.addEventListener('DOMContentLoaded', () => {
+        app = new ShuangpinPractice();
+        window.app = app;
+    });
+</script>
+</body>
+</html>
