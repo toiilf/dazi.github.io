@@ -322,7 +322,7 @@ body{
           <button class="btn btn-ghost" id="btn-cancel-add" style="flex:1">取消</button>
           <button class="btn btn-green" id="btn-save-add" style="flex:1">保存</button>
         </div>
-        <div class="url-group">
+        <!--div class="url-group">
           <div class="divider">━━ 或从网址导入 ━━</div>
           <div style="display:flex;gap:6px">
             <input type="url" id="inp-url" placeholder="输入文章网址…" style="flex:1" />
@@ -330,7 +330,7 @@ body{
           </div>
           <span class="fetch-status" id="fetch-status"></span>
         </div>
-      </div>
+      </div-->
     </div>
   </div>
   <!-- 结果弹窗 -->
@@ -670,31 +670,151 @@ function saveAdd(){
   saveUser(ua);closeAdd()
 }
 
-/* ========== fetch ========== */
+/* ========== fetch ========== 
 async function fetchUrl(){
   const url=document.getElementById('inp-url').value.trim()
   if(!url){alert('请输入网址');return}
   const st=document.getElementById('fetch-status');st.textContent='正在获取…';st.style.color='#6b7280'
   try{
-    const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}})
+    // 使用 AllOrigins 代理获取原始数据
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)
+    const r=await fetch(proxyUrl)
     if(!r.ok)throw new Error('HTTP '+r.status)
-    const html=await r.text(),doc=new DOMParser().parseFromString(html,'text/html')
-    let title='';const te=doc.querySelector('title');if(te){title=te.textContent.trim();title=title.replace(/[-_|]\s*(作文网|范文网|百度文库|知乎).*$/i,'')}
-    if(!title||title.length<=5){const h1=doc.querySelector('h1');if(h1)title=h1.textContent.trim()}
-    let content=''
-    for(const sel of['article','[class*="article-content"]','[class*="content"]','[class*="detail"]','[class*="post-content"]','#content']){
-      try{const el=doc.querySelector(sel);if(el&&el.textContent.trim().length>200){content=el.textContent.trim();break}}catch{}
+    
+    // 获取原始数据作为 ArrayBuffer
+    const buffer = await r.arrayBuffer()
+    
+    // 检测编码并转换
+    let html = ''
+    const uint8 = new Uint8Array(buffer)
+    
+    // 方法1：尝试通过 meta 标签检测编码
+    const textSample = new TextDecoder('utf-8', { fatal: false }).decode(buffer.slice(0, 2000))
+    let encoding = 'utf-8'
+    
+    // 查找 charset 声明
+    const charsetMatch = textSample.match(/charset\s*=\s*["']?\s*([^\s"';]+)/i)
+    if (charsetMatch) {
+      const detected = charsetMatch[1].toLowerCase()
+      if (detected === 'gbk' || detected === 'gb2312' || detected === 'gb18030') {
+        encoding = 'gbk'
+      }
     }
-    if(!content||content.length<50){const b=doc.querySelector('body');content=b?b.textContent.trim().substring(0,3000):''}
-    content=content.replace(/\s+/g,' ').trim();if(content.length>1000)content=content.substring(0,1000)
-    document.getElementById('inp-title').value=title||'未获取到标题'
-    document.getElementById('inp-author').value=url.includes('zuowen')?'作文网':url.includes('fanwen')?'范文网':'网页'
+    
+    // 如果没找到，通过字节特征判断
+    if (encoding === 'utf-8') {
+      // 检查是否有 GBK 编码特征（非 UTF-8 的连续中文）
+      let gbkScore = 0
+      for (let i = 0; i < Math.min(buffer.byteLength, 5000); i++) {
+        // GBK 中文通常以 0x81-0xFE 开头
+        if (uint8[i] >= 0x81 && uint8[i] <= 0xFE) {
+          gbkScore++
+        }
+      }
+      // 如果连续出现大量 GBK 特征字节，判定为 GBK
+      if (gbkScore > 100) {
+        encoding = 'gbk'
+      }
+    }
+    
+    // 使用检测到的编码解码
+    try {
+      html = new TextDecoder(encoding).decode(buffer)
+    } catch (e) {
+      // 解码失败则尝试自动检测
+      html = new TextDecoder('utf-8', { fatal: false }).decode(buffer)
+    }
+    
+    // 如果还是乱码，尝试强制使用 GBK
+    if (html.includes('锟斤拷') || html.includes('���') || html.replace(/[\x20-\x7E\n\r\t]/g,'').length > 0 && !html.match(/[\u4e00-\u9fa5]/)) {
+      html = new TextDecoder('gbk').decode(buffer)
+    }
+    
+    const doc=new DOMParser().parseFromString(html,'text/html')
+    
+    // 提取标题
+    let title=''
+    const te=doc.querySelector('title')
+    if(te){
+      title=te.textContent.trim()
+      title=title.replace(/[-_|]\s*(作文网|范文网|百度文库|知乎|原创|投稿).*$/i,'')
+    }
+    if(!title||title.length<=5){const h1=doc.querySelector('h1');if(h1)title=h1.textContent.trim()}
+    
+    // 如果标题还是乱码，尝试从 meta 获取
+    if (!title || title.includes('锟斤拷')) {
+      const meta = doc.querySelector('meta[name="title"]') || doc.querySelector('meta[property="og:title"]')
+      if (meta) title = meta.getAttribute('content') || ''
+    }
+    
+    // 提取内容 - 针对作文网优化
+    let content=''
+    const selectors = [
+      'article',
+      '.article-content',
+      '.content',
+      '.detail',
+      '.post-content',
+      '#content',
+      '.main-content',
+      '.entry-content',
+      '.article-body',
+      '.txt',
+      '.text',
+      '.article'
+    ]
+    for(const sel of selectors){
+      try{
+        const el=doc.querySelector(sel)
+        if(el && el.textContent.trim().length > 100){
+          content=el.textContent.trim()
+          break
+        }
+      }catch{}
+    }
+    
+    if(!content || content.length<50){
+      const paragraphs = doc.querySelectorAll('p')
+      let temp = ''
+      for(const p of paragraphs){
+        const text = p.textContent.trim()
+        if(text.length > 20 && !text.includes('广告') && !text.includes('版权所有')) {
+          temp += text + '\n'
+        }
+      }
+      if(temp.length > 100) content = temp
+    }
+    
+    if(!content || content.length<50){
+      throw new Error('未能提取到文章内容')
+    }
+    
+    // 清理内容
+    content = content.replace(/\s+/g,' ').trim()
+    if(content.length>1000) content=content.substring(0,1000)
+    
+    // 如果内容乱码，尝试用 GBK 重新获取
+    if (content.includes('锟斤拷') || content.includes('���')) {
+      try {
+        html = new TextDecoder('gbk').decode(buffer)
+        const doc2 = new DOMParser().parseFromString(html, 'text/html')
+        const el2 = doc2.querySelector(selectors.find(s => doc.querySelector(s)) || 'article')
+        if (el2) content = el2.textContent.trim().replace(/\s+/g,' ').substring(0,1000)
+      } catch(e) {}
+    }
+    
+    document.getElementById('inp-title').value=title || '未获取到标题'
+    document.getElementById('inp-author').value='作文网'
     document.getElementById('inp-content').value=content
     document.getElementById('content-hint').textContent=content.length+' / 1000 字'
-    st.textContent='✓ 获取成功！';st.style.color='#16a34a'
-  }catch(e){st.textContent='✗ 获取失败：'+e.message;st.style.color='#dc2626'}
+    st.textContent='✓ 获取成功！ (编码: ' + encoding + ')';st.style.color='#16a34a'
+  }catch(e){
+    st.textContent='✗ 获取失败：' + e.message
+    st.style.color='#dc2626'
+    st.textContent += ' 💡 建议：手动复制粘贴文章内容'
+  }
 }
-
+*/
 /* ========== DOM ready ========== */
 document.addEventListener('DOMContentLoaded',function(){
   // 检查 pinyin-pro 是否加载成功
